@@ -1,0 +1,207 @@
+"use client";
+
+import { useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { ingredientKey } from "@/lib/matching";
+import { createClient } from "@/lib/supabase/client";
+import { FRIDGE_ITEM_COLUMNS, type FridgeItem } from "@/lib/types";
+
+const MAX_LENGTH = 120;
+const SUGGESTIONS = ["Eggs", "Rice", "Pasta", "Canned tomatoes", "Onion", "Garlic", "Cheese", "Chickpeas", "Bread"];
+
+type Props = {
+  items: FridgeItem[];
+  setItems: Dispatch<SetStateAction<FridgeItem[]>>;
+  catalogKeys: Set<string>;
+  unavailable: boolean;
+};
+
+export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props) {
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function addIngredient(raw: string) {
+    const name = raw.trim();
+    if (!name) {
+      setError("Type an ingredient first, for example “eggs”.");
+      inputRef.current?.focus();
+      return false;
+    }
+    if (name.length > MAX_LENGTH) {
+      setError(`Please keep it under ${MAX_LENGTH} characters.`);
+      return false;
+    }
+
+    setSaving(true);
+    setError(null);
+    const { data, error: insertError } = await createClient()
+      .from("fridge_items")
+      .insert({ name })
+      .select(FRIDGE_ITEM_COLUMNS)
+      .single();
+    setSaving(false);
+
+    if (insertError || !data) {
+      setError("We couldn't save that ingredient. Please check your connection and try again.");
+      return false;
+    }
+    setItems((prev) => [data as FridgeItem, ...prev]);
+    setStatus(`${name} added to your fridge.`);
+    return true;
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (await addIngredient(value)) setValue("");
+    inputRef.current?.focus();
+  }
+
+  async function removeIngredient(item: FridgeItem) {
+    setError(null);
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    const { error: deleteError } = await createClient().from("fridge_items").delete().eq("id", item.id);
+    if (deleteError) {
+      setItems((prev) => [item, ...prev].sort((a, b) => b.created_at.localeCompare(a.created_at)));
+      setError(`We couldn't remove ${item.name}. Please try again.`);
+      return;
+    }
+    setStatus(`${item.name} removed from your fridge.`);
+  }
+
+  const ownedKeys = new Set(items.map((i) => ingredientKey(i.name)));
+  const suggestions = SUGGESTIONS.filter((s) => !ownedKeys.has(ingredientKey(s))).slice(0, 6);
+
+  return (
+    <section id="fridge" aria-labelledby="fridge-heading" className="scroll-mt-24">
+      <div className="rounded-[2rem] border border-line bg-white p-5 shadow-sm sm:p-8">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold uppercase tracking-widest text-sage-700">🧊 My Smart Fridge</p>
+          <h1 id="fridge-heading" className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            What&apos;s in your fridge?
+          </h1>
+          <p className="text-ink-soft">Add what you have and we&apos;ll show you what you can cook.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <label htmlFor="ingredient-input" className="sr-only">
+            Ingredient name
+          </label>
+          <input
+            ref={inputRef}
+            id="ingredient-input"
+            data-testid="core-input"
+            type="text"
+            name="ingredient"
+            autoComplete="off"
+            maxLength={MAX_LENGTH}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="e.g. eggs, rice, spinach…"
+            aria-describedby="fridge-feedback"
+            className="min-h-14 flex-1 rounded-2xl border border-line bg-cream/50 px-5 text-lg outline-none transition placeholder:text-ink-soft/70 focus:border-sage-500 focus:bg-white focus:ring-4 focus:ring-sage-100"
+          />
+          <button
+            type="submit"
+            data-testid="core-submit"
+            disabled={saving}
+            className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-sage-700 px-7 text-base font-semibold text-white shadow-md shadow-sage-800/15 transition hover:bg-sage-800 disabled:cursor-wait disabled:opacity-70"
+          >
+            <span aria-hidden="true" className="text-xl leading-none">
+              +
+            </span>
+            {saving ? "Adding…" : "Add Ingredient"}
+          </button>
+        </form>
+
+        <div id="fridge-feedback" aria-live="polite" className="mt-3 min-h-6 text-sm">
+          {error ? (
+            <p role="alert" className="font-medium text-terracotta-600">
+              {error}
+            </p>
+          ) : (
+            <p className="sr-only">{status}</p>
+          )}
+        </div>
+
+        {suggestions.length > 0 && (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-ink-soft">Quick add:</span>
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => addIngredient(s)}
+                disabled={saving}
+                className="rounded-full border border-dashed border-sage-500/60 px-3 py-1.5 text-sm font-medium text-sage-800 transition hover:bg-sage-50 disabled:opacity-60"
+              >
+                + {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-soft">
+            In your fridge <span className="text-ink">({items.length})</span>
+          </h2>
+
+          {unavailable && (
+            <p className="mt-3 rounded-xl bg-terracotta-50 px-4 py-3 text-sm text-terracotta-600">
+              We couldn&apos;t load your fridge right now. Refresh the page to try again.
+            </p>
+          )}
+
+          {items.length === 0 && !unavailable ? (
+            <p className="mt-3 rounded-2xl border border-dashed border-line bg-cream/50 px-5 py-6 text-center text-ink-soft">
+              Your fridge is empty. Add your first ingredient above. 🥕
+            </p>
+          ) : (
+            <ul className="mt-3 flex flex-wrap gap-2" aria-label="Saved ingredients">
+              {items.map((item) => {
+                const recognised = catalogKeys.has(ingredientKey(item.name));
+                return (
+                  <li
+                    key={item.id}
+                    data-testid="core-item"
+                    className={`group inline-flex max-w-full items-center gap-2 rounded-full border py-1.5 pl-4 pr-1.5 text-sm font-medium ${
+                      recognised ? "border-sage-200 bg-sage-50 text-sage-800" : "border-line bg-cream text-ink"
+                    }`}
+                  >
+                    {recognised && (
+                      <span
+                        role="img"
+                        aria-label="Used in recipes"
+                        title="Used in our recipes"
+                        className="h-2 w-2 shrink-0 rounded-full bg-sage-500"
+                      />
+                    )}
+                    <span className="break-all">{item.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeIngredient(item)}
+                      aria-label={`Remove ${item.name}`}
+                      title="Remove"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-terracotta-100 hover:text-terracotta-600"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {items.length > 0 && (
+            <p className="mt-3 flex items-center gap-2 text-xs text-ink-soft">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-sage-500" /> = used in our recipes. Other items
+              are saved but don&apos;t affect matching.
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}

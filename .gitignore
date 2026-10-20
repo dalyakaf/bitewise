@@ -1,0 +1,39 @@
+# secrets — never commit
+.env
+.env.local
+.env*
+!.env.example
+
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+
+# Next.js / build output
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+*.tsbuildinfo
+
+# Vercel / Supabase local state
+.vercel/
+supabase/.temp/
+supabase/.branches/
+
+# logs & debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.pem
+coverage/
