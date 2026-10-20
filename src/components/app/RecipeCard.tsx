@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatEuro, type RecipeMatch } from "@/lib/matching";
+import { costBand, type EquipmentMatch, type RecipeMatch } from "@/lib/matching";
 
 const BADGES = {
   "cook-now": { label: "✓ Cook Now", className: "bg-sage-700 text-white" },
@@ -7,10 +7,18 @@ const BADGES = {
   browse: { label: "", className: "" },
 } as const;
 
-export function RecipeCard({ match }: { match: RecipeMatch }) {
+type Props = {
+  match: RecipeMatch;
+  equipment: EquipmentMatch;
+  kitchenConfigured: boolean;
+  applianceNames: Record<string, string>;
+};
+
+export function RecipeCard({ match, equipment, kitchenConfigured, applianceNames }: Props) {
   const { recipe, status, have, missing } = match;
   const badge = BADGES[status];
   const required = have.length + missing.length;
+  const missingEquipment = equipment.missing.map((g) => g.appliances.map((id) => applianceNames[id] ?? id).join(" or "));
 
   return (
     <li>
@@ -33,18 +41,30 @@ export function RecipeCard({ match }: { match: RecipeMatch }) {
           <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{recipe.description}</p>
           <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm font-medium text-ink">
             <span>⏱ {recipe.total_minutes} min</span>
-            <span>💶 ~{formatEuro(recipe.estimated_cost_per_serving_eur)}/serving</span>
+            <span>💶 {costBand(recipe.estimated_cost_per_serving_eur)}/serving</span>
           </p>
-          <div className="mt-auto pt-4 text-sm">
-            {status === "cook-now" && <p className="font-medium text-sage-800">You have everything you need.</p>}
-            {status === "almost" && (
-              <p className="text-terracotta-600">
-                <span className="font-semibold">Missing:</span> {missing.map((m) => m.ingredient.name).join(", ")}
-              </p>
-            )}
-            {status === "browse" && (
-              <p className="text-ink-soft">
-                You have {have.length} of {required} ingredients
+
+          <div className="mt-auto space-y-1.5 pt-4 text-sm">
+            <p>
+              <span className="font-semibold text-ink-soft">Ingredients: </span>
+              {status === "cook-now" && <span className="font-medium text-sage-800">all in your fridge</span>}
+              {status === "almost" && (
+                <span className="text-terracotta-600">missing {missing.map((m) => m.ingredient.name).join(", ")}</span>
+              )}
+              {status === "browse" && (
+                <span className="text-ink-soft">
+                  you have {have.length} of {required}
+                </span>
+              )}
+            </p>
+            {kitchenConfigured && (
+              <p>
+                <span className="font-semibold text-ink-soft">Kitchen: </span>
+                {equipment.canMake ? (
+                  <span className="font-medium text-sage-800">you have the equipment</span>
+                ) : (
+                  <span className="text-terracotta-600">needs {missingEquipment.join(", ")}</span>
+                )}
               </p>
             )}
           </div>

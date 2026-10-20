@@ -13,7 +13,12 @@ Next.js (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Auth + Postgr
 1. Install Node.js 20 LTS or newer.
 2. `npm install`
 3. Copy `.env.example` to `.env.local` and fill in your Supabase project URL and **publishable (anon)** key.
-4. In Supabase → **SQL Editor** → **New query**, paste all of `supabase/setup.sql` and click **Run**.
+4. In Supabase → **SQL Editor** → **New query**, run each file below in order (paste the whole file, click **Run**):
+   1. `supabase/setup.sql` (Stage 1 base schema)
+   2. `supabase/migrations/002_my_kitchen.sql`
+   3. `supabase/migrations/003_recipe_schema.sql`
+   4. `supabase/migrations/004_ingredient_catalog.sql`
+   5. `supabase/migrations/005_recipe_library.sql`
 5. In Supabase → **Authentication → Sign In / Providers → Email**, turn **Confirm email** off.
 6. `npm run dev` and open http://localhost:3000
 
@@ -25,6 +30,8 @@ Next.js (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Auth + Postgr
 | `npm run build`     | Production build             |
 | `npm run lint`      | ESLint                       |
 | `npm run typecheck` | TypeScript type check        |
+| `npm run seed:check` | Validate recipe/ingredient seed data |
+| `npm run seed:build` | Validate and regenerate migrations 004 and 005 |
 
 ## Structure
 
@@ -37,7 +44,12 @@ src/
   lib/matching.ts      fridge ↔ recipe matching (Cook Now / Almost There)
   lib/supabase/        browser, server and middleware Supabase clients
   middleware.ts        session refresh + /app protection
-supabase/setup.sql     schema, RLS policies and recipe seed data
+supabase/setup.sql     Stage 1 schema, RLS policies and original seed data
+supabase/migrations/   incremental migrations (002 kitchen, 003 recipe schema, 004–005 generated)
+supabase/seed/         source of truth: ingredient catalog, appliances, recipe batches
+scripts/build-seed.mjs validates seed data (units, food safety, equipment) and generates 004/005
 ```
+
+Recipes are edited in `supabase/seed/recipes/*.mjs`, never in the generated SQL.
 
 Recipe costs are illustrative estimates, not live supermarket prices.

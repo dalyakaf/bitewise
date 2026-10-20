@@ -1,30 +1,49 @@
 "use client";
 
 import { useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { ingredientKey } from "@/lib/matching";
+import { ingredientKey, recognise, suggestIngredients, type CatalogIndex, type Recognition } from "@/lib/matching";
 import { createClient } from "@/lib/supabase/client";
-import { FRIDGE_ITEM_COLUMNS, type FridgeItem } from "@/lib/types";
+import { FRIDGE_ITEM_COLUMNS, type CatalogIngredient, type FridgeItem } from "@/lib/types";
 
 const MAX_LENGTH = 120;
-const SUGGESTIONS = ["Eggs", "Rice", "Pasta", "Canned tomatoes", "Onion", "Garlic", "Cheese", "Chickpeas", "Bread"];
+const QUICK_ADD = ["Eggs", "Rice", "Pasta", "Canned tomatoes", "Onion", "Garlic", "Cheese", "Chickpeas", "Bread"];
+
+const RECOGNITION_STYLES: Record<Recognition, { item: string; dot: string | null; label: string }> = {
+  "in-recipes": {
+    item: "border-sage-200 bg-sage-50 text-sage-800",
+    dot: "bg-sage-500",
+    label: "Used in our recipes",
+  },
+  recognised: {
+    item: "border-terracotta-100 bg-white text-ink",
+    dot: "border-2 border-terracotta-400 bg-white",
+    label: "Recognised ingredient, not in any recipe yet",
+  },
+  unknown: {
+    item: "border-line bg-cream text-ink",
+    dot: null,
+    label: "Saved, not recognised for recipe matching",
+  },
+};
 
 type Props = {
   items: FridgeItem[];
   setItems: Dispatch<SetStateAction<FridgeItem[]>>;
-  catalogKeys: Set<string>;
+  catalog: CatalogIngredient[];
+  catalogIndex: CatalogIndex;
   unavailable: boolean;
 };
 
-export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props) {
+export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailable }: Props) {
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function addIngredient(raw: string) {
-    const name = raw.trim();
-    if (!name) {
+  // Saves exactly what was typed (only whitespace-only input is refused).
+  async function addIngredient(name: string) {
+    if (!name.trim()) {
       setError("Type an ingredient first, for example “eggs”.");
       inputRef.current?.focus();
       return false;
@@ -70,8 +89,15 @@ export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props
     setStatus(`${item.name} removed from your fridge.`);
   }
 
+  function pickSuggestion(name: string) {
+    setValue(name);
+    inputRef.current?.focus();
+  }
+
   const ownedKeys = new Set(items.map((i) => ingredientKey(i.name)));
-  const suggestions = SUGGESTIONS.filter((s) => !ownedKeys.has(ingredientKey(s))).slice(0, 6);
+  const suggestions = suggestIngredients(value, catalog, ownedKeys);
+  const quickAdd = QUICK_ADD.filter((s) => !ownedKeys.has(ingredientKey(s))).slice(0, 6);
+  const hasCatalog = catalog.length > 0;
 
   return (
     <section id="fridge" aria-labelledby="fridge-heading" className="scroll-mt-24">
@@ -99,7 +125,7 @@ export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="e.g. eggs, rice, spinach…"
-            aria-describedby="fridge-feedback"
+            aria-describedby="fridge-feedback ingredient-suggestions"
             className="min-h-14 flex-1 rounded-2xl border border-line bg-cream/50 px-5 text-lg outline-none transition placeholder:text-ink-soft/70 focus:border-sage-500 focus:bg-white focus:ring-4 focus:ring-sage-100"
           />
           <button
@@ -115,7 +141,44 @@ export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props
           </button>
         </form>
 
-        <div id="fridge-feedback" aria-live="polite" className="mt-3 min-h-6 text-sm">
+        <div id="ingredient-suggestions" className="mt-3 min-h-9">
+          {suggestions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-ink-soft">Did you mean:</span>
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => pickSuggestion(s)}
+                  className="rounded-full bg-sage-50 px-3 py-1.5 text-sm font-medium capitalize text-sage-800 ring-1 ring-sage-200 transition hover:bg-sage-100"
+                >
+                  {s}
+                </button>
+              ))}
+              <span className="text-xs text-ink-soft">Or add exactly what you typed.</span>
+            </div>
+          ) : (
+            value.trim() === "" &&
+            quickAdd.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-ink-soft">Quick add:</span>
+                {quickAdd.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => addIngredient(s)}
+                    disabled={saving}
+                    className="rounded-full border border-dashed border-sage-500/60 px-3 py-1.5 text-sm font-medium text-sage-800 transition hover:bg-sage-50 disabled:opacity-60"
+                  >
+                    + {s}
+                  </button>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
+        <div id="fridge-feedback" aria-live="polite" className="mt-2 min-h-6 text-sm">
           {error ? (
             <p role="alert" className="font-medium text-terracotta-600">
               {error}
@@ -125,24 +188,7 @@ export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props
           )}
         </div>
 
-        {suggestions.length > 0 && (
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-ink-soft">Quick add:</span>
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => addIngredient(s)}
-                disabled={saving}
-                className="rounded-full border border-dashed border-sage-500/60 px-3 py-1.5 text-sm font-medium text-sage-800 transition hover:bg-sage-50 disabled:opacity-60"
-              >
-                + {s}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-8">
+        <div className="mt-4">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-soft">
             In your fridge <span className="text-ink">({items.length})</span>
           </h2>
@@ -160,24 +206,20 @@ export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props
           ) : (
             <ul className="mt-3 flex flex-wrap gap-2" aria-label="Saved ingredients">
               {items.map((item) => {
-                const recognised = catalogKeys.has(ingredientKey(item.name));
+                const { status: recognition, ingredient } = recognise(item.name, catalogIndex);
+                const style = RECOGNITION_STYLES[recognition];
+                const description = ingredient ? `${style.label} (recognised as ${ingredient.name})` : style.label;
                 return (
                   <li
                     key={item.id}
                     data-testid="core-item"
-                    className={`group inline-flex max-w-full items-center gap-2 rounded-full border py-1.5 pl-4 pr-1.5 text-sm font-medium ${
-                      recognised ? "border-sage-200 bg-sage-50 text-sage-800" : "border-line bg-cream text-ink"
-                    }`}
+                    title={description}
+                    className={`inline-flex max-w-full items-center gap-2 rounded-full border py-1.5 pl-4 pr-1.5 text-sm font-medium ${style.item}`}
                   >
-                    {recognised && (
-                      <span
-                        role="img"
-                        aria-label="Used in recipes"
-                        title="Used in our recipes"
-                        className="h-2 w-2 shrink-0 rounded-full bg-sage-500"
-                      />
+                    {style.dot && (
+                      <span role="img" aria-label={description} className={`h-2.5 w-2.5 shrink-0 rounded-full ${style.dot}`} />
                     )}
-                    <span className="break-all">{item.name}</span>
+                    <span className="whitespace-pre-wrap break-all">{item.name}</span>
                     <button
                       type="button"
                       onClick={() => removeIngredient(item)}
@@ -194,11 +236,19 @@ export function FridgePanel({ items, setItems, catalogKeys, unavailable }: Props
               })}
             </ul>
           )}
-          {items.length > 0 && (
-            <p className="mt-3 flex items-center gap-2 text-xs text-ink-soft">
-              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-sage-500" /> = used in our recipes. Other items
-              are saved but don&apos;t affect matching.
-            </p>
+
+          {items.length > 0 && hasCatalog && (
+            <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-soft" aria-label="Legend">
+              {(["in-recipes", "recognised", "unknown"] as const).map((key) => (
+                <li key={key} className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 rounded-full ${RECOGNITION_STYLES[key].dot ?? "border border-line bg-cream"}`}
+                  />
+                  {RECOGNITION_STYLES[key].label}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

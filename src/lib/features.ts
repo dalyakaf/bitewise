@@ -6,7 +6,7 @@
 export type FeatureStatus = "live" | "soon";
 
 export type Feature = {
-  id: "smart-fridge" | "meal-finder" | "weekly-meals" | "study-mode" | "favorites" | "grocery-list";
+  id: "smart-fridge" | "meal-finder" | "my-kitchen" | "weekly-meals" | "study-mode" | "favorites" | "grocery-list";
   name: string;
   emoji: string;
   summary: string;
@@ -27,9 +27,17 @@ export const FEATURES: Feature[] = [
     id: "meal-finder",
     name: "Smart Meal Finder",
     emoji: "🔎",
-    summary: "See budget recipes you can cook right now, or that are only one or two ingredients away.",
+    summary: "Browse 120+ student recipes and see what you can cook right now, or what is only one or two ingredients away.",
     status: "live",
     href: "/app#meal-finder",
+  },
+  {
+    id: "my-kitchen",
+    name: "My Kitchen",
+    emoji: "🍳",
+    summary: "Tell us which appliances you have (air fryer, microwave, oven…) and only see recipes your kitchen can make.",
+    status: "live",
+    href: "/app#kitchen",
   },
   {
     id: "weekly-meals",

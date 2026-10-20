@@ -29,7 +29,7 @@ function HeroPreview() {
               ✓ Cook Now
             </span>
             <p className="mt-2 font-display text-lg font-semibold">Egg Fried Rice</p>
-            <p className="mt-1 text-sm text-ink-soft">15 min · ~€1.10 per serving</p>
+            <p className="mt-1 text-sm text-ink-soft">15 min · €1–2 per serving</p>
           </div>
         </div>
       </div>
