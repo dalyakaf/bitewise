@@ -8,6 +8,9 @@ export type CatalogIngredient = {
   id: number;
   name: string;
   aliases: string[];
+  category?: string;
+  /** Approximate smallest-pack price, for rough Study Mode estimates only. */
+  typical_pack_price_eur?: number | null;
 };
 
 export type RecipeIngredient = {
@@ -57,7 +60,26 @@ export type Recipe = {
 
 export const FRIDGE_ITEM_COLUMNS = "id, name, created_at";
 export const APPLIANCE_COLUMNS = "id, name, emoji, sort_order";
-export const CATALOG_COLUMNS = "id, name, aliases";
+// "*" so the app keeps working before/after migrations add columns.
+export const CATALOG_COLUMNS = "*";
+
+/** A curated substitution and the recipes it is valid in (from migration 006/007). */
+export type SwapRule = {
+  id: number;
+  original_ingredient_id: number;
+  substitute_ingredient_id: number;
+  ratio_note: string;
+  context_note: string;
+  adjustment_note: string;
+  limitation_note: string;
+  allergen_note: string;
+  is_adapted: boolean;
+  recipe_substitutions: { recipe_id: number; extra_minutes: number }[];
+};
+
+export const SWAP_COLUMNS =
+  "id, original_ingredient_id, substitute_ingredient_id, ratio_note, context_note, adjustment_note, " +
+  "limitation_note, allergen_note, is_adapted, recipe_substitutions(recipe_id, extra_minutes)";
 
 export const RECIPE_COLUMNS =
   "id, slug, title, description, emoji, prep_minutes, cook_minutes, total_minutes, servings, " +

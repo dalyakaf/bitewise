@@ -1,6 +1,6 @@
 # BiteWise — Progress
 
-_Last updated: 21 October 2026_
+_Last updated: 22 October 2026_
 
 **Status:** Stage 1 is done and working. Stage 2 code is done and committed, but needs **4 Supabase migrations** before recipes and My Kitchen work. Nothing has been pushed to GitHub or deployed to Vercel yet.
 
@@ -97,11 +97,33 @@ Run them **in this order** in Supabase **SQL Editor → New query**. For each on
 
 ---
 
+## 🚧 Stage 3 (local commit, NOT deployed): My Favorites, Study Mode, Smart Swaps
+
+Production (https://bitewise-plum.vercel.app) still runs Stage 2 (`df5e452`).
+
+- **My Favorites:**
+  - A heart on every recipe card and on each recipe page, plus a My Favorites section on `/app` with an empty state and loading/error feedback.
+  - Stored in `favorite_recipes` with a primary key on (user, recipe), so there are no duplicates. Each user can only read, add and delete their own favourites (RLS).
+- **Study Mode:**
+  - An optional switch in Smart Meal Finder: time (10/15/20/30 min, total prep + cook including swap changes) and extra spending (€0 / ≤ €5 / ≤ €10).
+  - Ranked by: nothing to buy → fewer swaps → lower cost → shorter time. Each card shows plain-language reasons.
+  - Costs are rough estimates from approximate pack prices; they're labelled as such and aren't live prices.
+- **Smart Swaps:**
+  - 52 curated rules give 234 swaps, each approved for a specific recipe. The generator checks recipe context, diet and double-counting.
+  - A new Smart Swaps tab sits between Cook Now and Almost There, and swaps never count as Cook Now.
+  - Recipe pages explain each swap: original ingredient, your alternative, quantity, method changes, limitations and allergens.
+- **Brown rice** is now its own ingredient (a swap for white rice), not a synonym.
+- **Ingredient deletion:** an item now disappears only after Supabase confirms the delete.
+- **Migrations to run, in order:**
+  1. `supabase/migrations/006_stage3_schema.sql`
+  2. `supabase/migrations/007_stage3_catalog_and_swaps.sql`
+- **Safe to deploy only after both migrations have run.** The code also degrades gracefully without them: favourites hidden, no swaps.
+
+---
+
 ## 🔮 Remaining features (not started)
 Each is listed in `src/lib/features.ts` as `status: "soon"`:
 - **My Weekly Meals:** plan the week around the university timetable.
-- **Study Mode:** quick meals with little washing up during exam weeks.
-- **Favorites:** save recipes.
 - **Smart Grocery List:** turn missing ingredients into a shopping list.
 
 ## ⚠️ Known notes

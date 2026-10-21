@@ -2,15 +2,18 @@
 //
 //   npm run seed:check                 validate everything
 //   npm run seed:check -- <file.mjs>   validate one recipe batch file
-//   npm run seed:build                 validate, then write migrations 004 and 005
+//   npm run seed:build                 validate, then write migrations 005 and 007
 //
-// Source of truth: supabase/seed/ingredients.mjs and supabase/seed/recipes/*.mjs
+// Source of truth: supabase/seed/ingredients.mjs, pack-prices.mjs, swaps.mjs and recipes/*.mjs.
+// 004 (Stage 2 catalog) is frozen because it has been applied; catalog changes ship in 007.
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { ingredientKey } from "../src/lib/ingredient-key.ts";
 import { APPLIANCES, INGREDIENTS } from "../supabase/seed/ingredients.mjs";
+import { CATEGORY_PACK_PRICE, PACK_PRICE_OVERRIDES } from "../supabase/seed/pack-prices.mjs";
+import { SWAPS } from "../supabase/seed/swaps.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const RECIPES_DIR = join(ROOT, "supabase/seed/recipes");
@@ -242,6 +245,64 @@ for (const r of recipes) {
   r.__tags = [...derived].sort();
 }
 
+// ── Pack prices (Study Mode estimates) ───────────────────────────────────────
+const packPrice = new Map();
+for (const name of Object.keys(PACK_PRICE_OVERRIDES)) {
+  if (!catalog.has(name)) errors.push(`pack-prices: "${name}" is not in the catalog`);
+}
+for (const [name, category] of INGREDIENTS) {
+  const price = PACK_PRICE_OVERRIDES[name] ?? CATEGORY_PACK_PRICE[category];
+  if (typeof price !== "number" || price < 0 || price > 10) errors.push(`pack-prices: no valid price for "${name}"`);
+  if (category === "staple" && price !== 0) errors.push(`pack-prices: staple "${name}" must cost 0 (assumed owned)`);
+  packPrice.set(name, price);
+}
+
+// ── Smart Swaps validation & per-recipe applicability ────────────────────────
+const SWAP_TEXT_FIELDS = ["ratio", "context", "adjust", "limits", "allergens"];
+const POULTRY_OR_MINCE_SWAP = /(75\s?°C|no pink|cooked through)/i;
+const recipeBySlug = new Map(recipes.map((r) => [r.slug, r]));
+const swapKeys = new Set();
+const swapPairs = []; // { swap, recipe, extra }
+
+for (const swap of SWAPS) {
+  const where = `swaps › ${swap.from} → ${swap.to}`;
+  const err = (msg) => errors.push(`${where}: ${msg}`);
+  if (!catalog.has(swap.from)) err(`"${swap.from}" is not in the catalog`);
+  if (!catalog.has(swap.to)) err(`"${swap.to}" is not in the catalog`);
+  if (swap.from === swap.to) err("an ingredient cannot substitute itself");
+  if (ingredientKey(swap.from) === ingredientKey(swap.to)) err("this is a synonym, not a substitution");
+  const key = `${swap.from}→${swap.to}`;
+  if (swapKeys.has(key)) err("duplicate rule");
+  swapKeys.add(key);
+  for (const f of SWAP_TEXT_FIELDS) if (!swap[f] || !/[.!)]$/.test(swap[f])) err(`"${f}" is required and must end with a period`);
+  if (NUTRITION_CLAIMS.test(SWAP_TEXT_FIELDS.map((f) => swap[f]).join(" "))) err("avoid nutrition/health claims");
+  if (swap.extra !== undefined && (!Number.isInteger(swap.extra) || swap.extra < -20 || swap.extra > 30)) err("extra must be whole minutes between -20 and 30");
+  for (const slug of [...(swap.only ?? []), ...(swap.exclude ?? []), ...Object.keys(swap.extraFor ?? {})]) {
+    if (!recipeBySlug.has(slug)) err(`unknown recipe slug "${slug}"`);
+  }
+  if (POULTRY_OR_MINCE.has(swap.to) && !POULTRY_OR_MINCE_SWAP.test(swap.adjust)) err('poultry/mince substitutes must say "cooked through" / "no pink" / 75°C');
+  if (RAW_SEAFOOD.has(swap.to) && !/(opaque|flakes|turn(ed|s)? pink)/i.test(swap.adjust)) err("raw fish/prawn substitutes need a doneness cue");
+  if (STAPLES.has(swap.from)) err("staples are assumed owned and never need a swap");
+
+  const candidates = swap.only ? swap.only.map((slug) => recipeBySlug.get(slug)).filter(Boolean) : recipes;
+  for (const recipe of candidates) {
+    const explicit = Boolean(swap.only);
+    const skip = (reason) => {
+      if (explicit) err(`listed in "only" but not applicable to ${recipe.slug}: ${reason}`);
+    };
+    const required = recipe.ingredients.filter((t) => !t[4]).map((t) => t[0]);
+    const all = recipe.ingredients.map((t) => t[0]);
+    if (!required.includes(swap.from)) { skip(`it does not require ${swap.from}`); continue; }
+    if (all.includes(swap.to)) { skip(`it already uses ${swap.to} (would double-count)`); continue; }
+    if (swap.exclude?.includes(recipe.slug)) continue;
+    const essential = (recipe.equipment ?? []).filter((g) => !g.optional);
+    if (swap.cookedOnly && essential.length === 0) continue;
+    if (recipe.__tags.includes("vegetarian") && MEAT_FISH.has(swap.to)) { skip("vegetarian recipe"); continue; }
+    if (recipe.__tags.includes("vegan") && (MEAT_FISH.has(swap.to) || NOT_VEGAN.has(swap.to))) { skip("vegan recipe"); continue; }
+    swapPairs.push({ swap, recipe, extra: swap.extraFor?.[recipe.slug] ?? swap.extra ?? 0 });
+  }
+}
+
 // ── Report ───────────────────────────────────────────────────────────────────
 const scope = onlyFiles.length ? recipes.filter((r) => onlyFiles.includes(resolve(ROOT, r.__file))) : recipes;
 const scopedErrors = onlyFiles.length
@@ -261,6 +322,14 @@ console.log(
     (onlyFiles.length ? ` (${scope.length} in checked file)` : "") +
     ` across ${batchFiles.length} file(s)`,
 );
+const swapRecipes = new Set(swapPairs.map((p) => p.recipe.slug));
+console.log(`✓ ${SWAPS.length} smart swap rules → ${swapPairs.length} recipe-specific swaps across ${swapRecipes.size} recipes`);
+if (args.includes("--swaps")) {
+  for (const swap of SWAPS) {
+    const slugs = swapPairs.filter((p) => p.swap === swap).map((p) => p.recipe.slug);
+    console.log(`  ${`${swap.from} → ${swap.to}`.padEnd(34)} ${String(slugs.length).padStart(2)}  ${slugs.join(" ")}`);
+  }
+}
 console.log(
   `  ${Object.entries(tagCounts)
     .sort((a, b) => b[1] - a[1])
@@ -407,6 +476,81 @@ for (const [id] of APPLIANCES) {
   }
 }
 
-writeFileSync(join(MIGRATIONS_DIR, "004_ingredient_catalog.sql"), ingredientSql);
+const num = (n) => Number(n).toFixed(2);
+const stage3Sql = `${HEADER}
+-- =============================================================================
+-- 007 — Stage 3 data: ingredient catalog v2 (${INGREDIENTS.length} ingredients, approximate pack prices)
+--       and Smart Swaps (${SWAPS.length} rules, ${swapPairs.length} recipe-specific swaps)
+-- Run AFTER 006_stage3_schema.sql. Safe to re-run. Only touches shared catalog
+-- tables (ingredients, ingredient_substitutions, recipe_substitutions); never
+-- users, fridge items, favourites, appliances or recipes.
+-- Pack prices are rough estimates for Study Mode, not live supermarket prices.
+-- =============================================================================
+begin;
+
+-- 1. Ingredient catalog v2 (adds "brown rice" as its own ingredient; it is a
+--    substitution for white rice, not a synonym) + approximate pack prices.
+insert into public.ingredients (name, category, aliases, typical_pack_price_eur) values
+${INGREDIENTS.map(([name, category, aliases]) => `  (${q(name)}, ${q(category)}, ${arr(aliases)}, ${num(packPrice.get(name))})`).join(",\n")}
+on conflict (name) do update
+  set category = excluded.category,
+      aliases = excluded.aliases,
+      typical_pack_price_eur = excluded.typical_pack_price_eur;
+
+-- 2. Substitution rules (upserted by original + substitute)
+insert into public.ingredient_substitutions
+  (original_ingredient_id, substitute_ingredient_id, ratio_note, context_note, adjustment_note, limitation_note, allergen_note, is_adapted)
+select o.id, s.id, v.ratio_note, v.context_note, v.adjustment_note, v.limitation_note, v.allergen_note, v.is_adapted
+from (values
+${SWAPS.map((w) => `  (${q(w.from)}, ${q(w.to)}, ${q(w.ratio)}, ${q(w.context)}, ${q(w.adjust)}, ${q(w.limits)}, ${q(w.allergens)}, ${Boolean(w.adapted)})`).join(",\n")}
+) as v (original, substitute, ratio_note, context_note, adjustment_note, limitation_note, allergen_note, is_adapted)
+join public.ingredients o on o.name = v.original
+join public.ingredients s on s.name = v.substitute
+on conflict (original_ingredient_id, substitute_ingredient_id) do update
+  set ratio_note = excluded.ratio_note,
+      context_note = excluded.context_note,
+      adjustment_note = excluded.adjustment_note,
+      limitation_note = excluded.limitation_note,
+      allergen_note = excluded.allergen_note,
+      is_adapted = excluded.is_adapted;
+
+-- 3. Which rule is valid for which recipe (fully generated, so it is rebuilt)
+delete from public.recipe_substitutions;
+
+insert into public.recipe_substitutions (recipe_id, substitution_id, extra_minutes)
+select r.id, sub.id, v.extra_minutes
+from (values
+${swapPairs.map((p) => `  (${q(p.recipe.slug)}, ${q(p.swap.from)}, ${q(p.swap.to)}, ${p.extra})`).join(",\n")}
+) as v (slug, original, substitute, extra_minutes)
+join public.recipes r on r.slug = v.slug
+join public.ingredients o on o.name = v.original
+join public.ingredients s on s.name = v.substitute
+join public.ingredient_substitutions sub
+  on sub.original_ingredient_id = o.id and sub.substitute_ingredient_id = s.id;
+
+do $$
+begin
+  if (select count(*) from public.ingredients where name = any(${arr(INGREDIENTS.map(([n]) => n))})) <> ${INGREDIENTS.length} then
+    raise exception 'Ingredient catalog import incomplete';
+  end if;
+  if (select count(*) from public.ingredient_substitutions) < ${SWAPS.length} then
+    raise exception 'Substitution rules import incomplete';
+  end if;
+  if (select count(*) from public.recipe_substitutions) <> ${swapPairs.length} then
+    raise exception 'Recipe substitutions incomplete. Did you run 005_recipe_library.sql and 006_stage3_schema.sql first?';
+  end if;
+end $$;
+
+commit;
+
+select
+  (select count(*) from public.ingredients)              as ingredients,
+  (select count(*) from public.ingredient_substitutions) as substitution_rules,
+  (select count(*) from public.recipe_substitutions)     as recipe_substitutions;
+`;
+
+// 004 is frozen (already applied in production); the catalog now ships in 007.
+void ingredientSql;
 writeFileSync(join(MIGRATIONS_DIR, "005_recipe_library.sql"), recipeSql);
-console.log(`✓ wrote supabase/migrations/004_ingredient_catalog.sql and 005_recipe_library.sql`);
+writeFileSync(join(MIGRATIONS_DIR, "007_stage3_catalog_and_swaps.sql"), stage3Sql);
+console.log(`✓ wrote supabase/migrations/005_recipe_library.sql (unchanged unless recipes changed) and 007_stage3_catalog_and_swaps.sql`);

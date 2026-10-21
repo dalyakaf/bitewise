@@ -39,6 +39,7 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [removing, setRemoving] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Saves exactly what was typed (only whitespace-only input is refused).
@@ -77,15 +78,21 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
     inputRef.current?.focus();
   }
 
+  // Removed from the list only after Supabase confirms, so a quick refresh can't bring it back.
   async function removeIngredient(item: FridgeItem) {
     setError(null);
-    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    setRemoving((prev) => new Set(prev).add(item.id));
     const { error: deleteError } = await createClient().from("fridge_items").delete().eq("id", item.id);
+    setRemoving((prev) => {
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
     if (deleteError) {
-      setItems((prev) => [item, ...prev].sort((a, b) => b.created_at.localeCompare(a.created_at)));
       setError(`We couldn't remove ${item.name}. Please try again.`);
       return;
     }
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
     setStatus(`${item.name} removed from your fridge.`);
   }
 
@@ -223,9 +230,11 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
                     <button
                       type="button"
                       onClick={() => removeIngredient(item)}
+                      disabled={removing.has(item.id)}
+                      aria-busy={removing.has(item.id)}
                       aria-label={`Remove ${item.name}`}
                       title="Remove"
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-terracotta-100 hover:text-terracotta-600"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-terracotta-100 hover:text-terracotta-600 disabled:animate-pulse disabled:opacity-50"
                     >
                       <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />

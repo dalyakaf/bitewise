@@ -1,27 +1,38 @@
 import Link from "next/link";
 import { costBand, type EquipmentMatch, type RecipeMatch } from "@/lib/matching";
+import { FavoriteButton } from "./FavoriteButton";
 
 const BADGES = {
   "cook-now": { label: "✓ Cook Now", className: "bg-sage-700 text-white" },
+  "smart-swap": { label: "🔄 Smart Swaps", className: "bg-sage-100 text-sage-800 ring-1 ring-sage-500" },
   almost: { label: "Almost There", className: "bg-terracotta-600 text-white" },
   browse: { label: "", className: "" },
 } as const;
+
+export type FavoriteControl = { active: boolean; pending: boolean; onToggle: () => void };
 
 type Props = {
   match: RecipeMatch;
   equipment: EquipmentMatch;
   kitchenConfigured: boolean;
   applianceNames: Record<string, string>;
+  favorite?: FavoriteControl;
+  /** Study Mode explanations, shown when present. */
+  reasons?: string[];
 };
 
-export function RecipeCard({ match, equipment, kitchenConfigured, applianceNames }: Props) {
-  const { recipe, status, have, missing } = match;
+export function RecipeCard({ match, equipment, kitchenConfigured, applianceNames, favorite, reasons }: Props) {
+  const { recipe, status, have, missing, swaps, stillMissing } = match;
   const badge = BADGES[status];
   const required = have.length + missing.length;
+  const essential = equipment.groups.filter((g) => !g.optional);
+  const equipmentText = essential.length
+    ? essential.map((g) => g.appliances.map((id) => applianceNames[id] ?? id).join(" or ")).join(" + ")
+    : "No cooking appliance needed";
   const missingEquipment = equipment.missing.map((g) => g.appliances.map((id) => applianceNames[id] ?? id).join(" or "));
 
   return (
-    <li>
+    <li className="relative">
       <Link
         href={`/app/recipes/${recipe.slug}`}
         className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sage-800/10"
@@ -40,36 +51,73 @@ export function RecipeCard({ match, equipment, kitchenConfigured, applianceNames
           <h3 className="font-display text-lg font-semibold leading-snug">{recipe.title}</h3>
           <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{recipe.description}</p>
           <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm font-medium text-ink">
-            <span>⏱ {recipe.total_minutes} min</span>
+            <span>
+              ⏱ {recipe.total_minutes} min
+              {match.adaptedMinutes !== recipe.total_minutes && swaps.length > 0 && (
+                <span className="font-normal text-ink-soft"> ({match.adaptedMinutes} with swaps)</span>
+              )}
+            </span>
             <span>💶 {costBand(recipe.estimated_cost_per_serving_eur)}/serving</span>
           </p>
+
+          {reasons && reasons.length > 0 && (
+            <ul className="mt-3 space-y-1 rounded-2xl bg-sage-50 px-3 py-2 text-sm text-sage-800" aria-label="Why this fits">
+              {reasons.map((reason) => (
+                <li key={reason} className="flex gap-2">
+                  <span aria-hidden="true">✓</span>
+                  {reason}
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div className="mt-auto space-y-1.5 pt-4 text-sm">
             <p>
               <span className="font-semibold text-ink-soft">Ingredients: </span>
               {status === "cook-now" && <span className="font-medium text-sage-800">all in your fridge</span>}
+              {status === "smart-swap" && <span className="font-medium text-sage-800">all covered with your swaps</span>}
               {status === "almost" && (
-                <span className="text-terracotta-600">missing {missing.map((m) => m.ingredient.name).join(", ")}</span>
+                <span className="text-terracotta-600">missing {stillMissing.map((m) => m.ingredient.name).join(", ")}</span>
               )}
               {status === "browse" && (
                 <span className="text-ink-soft">
-                  you have {have.length} of {required}
+                  you have {have.length + swaps.length} of {required}
                 </span>
               )}
             </p>
-            {kitchenConfigured && (
-              <p>
-                <span className="font-semibold text-ink-soft">Kitchen: </span>
-                {equipment.canMake ? (
-                  <span className="font-medium text-sage-800">you have the equipment</span>
-                ) : (
-                  <span className="text-terracotta-600">needs {missingEquipment.join(", ")}</span>
-                )}
-              </p>
+            {swaps.length > 0 && (
+              <ul aria-label="Smart swaps" className="space-y-0.5">
+                {swaps.map((swap) => (
+                  <li key={swap.original.ingredient.id} className="text-sage-800">
+                    🔄 <span className="capitalize">{swap.original.ingredient.name}</span> →{" "}
+                    {swap.substitute.category === "staple" ? `${swap.substitute.name} (pantry staple)` : `your ${swap.fridgeName}`}
+                  </li>
+                ))}
+              </ul>
             )}
+            <p>
+              <span className="font-semibold text-ink-soft">Equipment: </span>
+              <span className="text-ink">{equipmentText}</span>
+              {kitchenConfigured &&
+                (equipment.canMake ? (
+                  <span className="font-medium text-sage-800"> · ✓ you have the equipment</span>
+                ) : (
+                  <span className="text-terracotta-600"> · ✗ needs {missingEquipment.join(", ")}</span>
+                ))}
+            </p>
           </div>
         </div>
       </Link>
+      {favorite && (
+        <div className="absolute right-3 top-3">
+          <FavoriteButton
+            active={favorite.active}
+            pending={favorite.pending}
+            title={recipe.title}
+            onToggle={favorite.onToggle}
+          />
+        </div>
+      )}
     </li>
   );
 }

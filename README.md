@@ -19,6 +19,8 @@ Next.js (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Auth + Postgr
    3. `supabase/migrations/003_recipe_schema.sql`
    4. `supabase/migrations/004_ingredient_catalog.sql`
    5. `supabase/migrations/005_recipe_library.sql`
+   6. `supabase/migrations/006_stage3_schema.sql` (My Favorites, Smart Swaps tables, pack prices)
+   7. `supabase/migrations/007_stage3_catalog_and_swaps.sql` (generated: catalog v2 + Smart Swaps)
 5. In Supabase → **Authentication → Sign In / Providers → Email**, turn **Confirm email** off.
 6. `npm run dev` and open http://localhost:3000
 
@@ -31,7 +33,7 @@ Next.js (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Auth + Postgr
 | `npm run lint`      | ESLint                       |
 | `npm run typecheck` | TypeScript type check        |
 | `npm run seed:check` | Validate recipe/ingredient seed data |
-| `npm run seed:build` | Validate and regenerate migrations 004 and 005 |
+| `npm run seed:build` | Validate and regenerate migrations 005 and 007 (004 is frozen) |
 
 ## Structure
 
@@ -39,15 +41,16 @@ Next.js (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Auth + Postgr
 src/
   app/                 routes: / , /signup , /login , /app , /app/recipes/[slug]
   components/          shared UI (header, auth form, logout)
-  components/app/      /app features: fridge, meal finder, coming soon
-  lib/features.ts      feature registry (Study Mode, Favorites, Weekly Planner, Grocery List are "soon")
-  lib/matching.ts      fridge ↔ recipe matching (Cook Now / Almost There)
+  components/app/      /app features: fridge, kitchen, meal finder + Study Mode, favorites
+  lib/features.ts      feature registry (Weekly Meals and Grocery List are "soon")
+  lib/matching.ts      fridge ↔ recipe matching (Cook Now / Smart Swaps / Almost There), equipment
+  lib/study-mode.ts    Study Mode ranking and plain-language reasons
   lib/supabase/        browser, server and middleware Supabase clients
   middleware.ts        session refresh + /app protection
 supabase/setup.sql     Stage 1 schema, RLS policies and original seed data
 supabase/migrations/   incremental migrations (002 kitchen, 003 recipe schema, 004–005 generated)
-supabase/seed/         source of truth: ingredient catalog, appliances, recipe batches
-scripts/build-seed.mjs validates seed data (units, food safety, equipment) and generates 004/005
+supabase/seed/         source of truth: ingredient catalog, appliances, pack prices, Smart Swaps, recipe batches
+scripts/build-seed.mjs validates seed data (units, food safety, equipment, swap context) and generates 005/007
 ```
 
 Recipes are edited in `supabase/seed/recipes/*.mjs`, never in the generated SQL.

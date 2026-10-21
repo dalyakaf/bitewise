@@ -35,7 +35,9 @@ export const INGREDIENTS = [
   ["hummus", "legumes", ["houmous", "humus", "hummous"]],
 
   // ── Grains, bread & starch ─────────────────────────────────────────────────
-  ["rice", "grains", ["white rice", "cooked rice", "basmati rice", "basmati", "jasmine rice", "long grain rice", "brown rice", "arborio rice", "arborio", "risotto rice", "microwave rice", "rice pouch"]],
+  ["rice", "grains", ["white rice", "cooked rice", "basmati rice", "basmati", "jasmine rice", "long grain rice", "arborio rice", "arborio", "risotto rice", "microwave rice", "rice pouch"]],
+  // Brown rice cooks 2-3x longer than white rice, so it is a Smart Swap, not a synonym.
+  ["brown rice", "grains", ["wholegrain rice", "whole grain rice", "brown basmati", "cooked brown rice"]],
   ["pasta", "grains", ["spaghetti", "penne", "fusilli", "macaroni", "linguine", "farfalle", "rigatoni", "tagliatelle", "dried pasta", "orzo"]],
   ["gnocchi", "grains", ["potato gnocchi"]],
   ["noodles", "grains", ["noodle", "ramen", "ramen noodles", "instant noodles", "egg noodles", "udon", "udon noodles", "rice noodles", "soba"]],

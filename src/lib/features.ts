@@ -1,5 +1,5 @@
 /**
- * Feature registry. Stage 1 ships the fridge and meal finder; the rest are
+ * Feature registry. Live features link into /app; "soon" ones are
  * placeholders so the navigation, landing page and dashboard can grow without
  * restructuring. Flip `status` to "live" and add an `href` when a feature ships.
  */
@@ -50,15 +50,17 @@ export const FEATURES: Feature[] = [
     id: "study-mode",
     name: "Study Mode",
     emoji: "📚",
-    summary: "Exam week? Get 10-minute, brain-fuel meals and minimal washing up.",
-    status: "soon",
+    summary: "Short on time or money? Pick your minutes and budget and get the most practical meals first.",
+    status: "live",
+    href: "/app#study-mode",
   },
   {
     id: "favorites",
     name: "Favorites",
     emoji: "❤️",
     summary: "Save the recipes you love and find them again in one tap.",
-    status: "soon",
+    status: "live",
+    href: "/app#favorites",
   },
   {
     id: "grocery-list",
