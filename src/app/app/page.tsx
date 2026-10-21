@@ -26,7 +26,7 @@ export default async function AppPage() {
 
   // Each query degrades independently, so the fridge (the core feature) keeps
   // working even if a newer table is unavailable.
-  const [fridgeResult, recipesResult, catalogResult, appliancesResult, kitchenResult, swapsResult, favoritesResult] =
+  const [fridgeResult, recipesResult, catalogResult, appliancesResult, kitchenResult, swapsResult, favoritesResult, plannerResult] =
     await Promise.all([
       supabase.from("fridge_items").select(FRIDGE_ITEM_COLUMNS).order("created_at", { ascending: false }),
       supabase.from("recipes").select(RECIPE_COLUMNS).order("total_minutes", { ascending: true }),
@@ -35,6 +35,7 @@ export default async function AppPage() {
       supabase.from("user_appliances").select("appliance_id"),
       supabase.from("ingredient_substitutions").select(SWAP_COLUMNS),
       supabase.from("favorite_recipes").select("recipe_id").order("created_at", { ascending: false }),
+      supabase.from("meal_plan_entries").select("id", { head: true, count: "exact" }),
     ]);
 
   return (
@@ -50,6 +51,7 @@ export default async function AppPage() {
       swapRules={(swapsResult.data ?? []) as unknown as SwapRule[]}
       initialFavoriteIds={((favoritesResult.data ?? []) as { recipe_id: number }[]).map((row) => row.recipe_id)}
       favoritesUnavailable={Boolean(favoritesResult.error)}
+      plannerAvailable={!plannerResult.error}
     />
   );
 }

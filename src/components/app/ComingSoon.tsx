@@ -2,6 +2,7 @@ import { FEATURES } from "@/lib/features";
 
 export function ComingSoon() {
   const upcoming = FEATURES.filter((f) => f.status === "soon");
+  if (upcoming.length === 0) return null;
 
   return (
     <section aria-labelledby="coming-soon-heading">

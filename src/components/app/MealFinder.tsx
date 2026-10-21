@@ -60,6 +60,7 @@ type Props = {
   ownedAppliances: Set<string>;
   unavailable: boolean;
   favoriteFor?: (recipe: Recipe) => FavoriteControl | undefined;
+  planner?: boolean;
 };
 
 function chip(active: boolean) {
@@ -68,7 +69,7 @@ function chip(active: boolean) {
   }`;
 }
 
-export function MealFinder({ entries, recipeCount, applianceNames, ownedAppliances, unavailable, favoriteFor }: Props) {
+export function MealFinder({ entries, recipeCount, applianceNames, ownedAppliances, unavailable, favoriteFor, planner }: Props) {
   const [tab, setTab] = useState<Tab>("cook-now");
   const [maxMinutes, setMaxMinutes] = useState<number | null>(null);
   const [category, setCategory] = useState("all");
@@ -144,6 +145,7 @@ export function MealFinder({ entries, recipeCount, applianceNames, ownedApplianc
     kitchenConfigured,
     applianceNames,
     favorite: favoriteFor?.(entry.recipe),
+    planner,
   });
 
   return (

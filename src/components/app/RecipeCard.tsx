@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { costBand, type EquipmentMatch, type RecipeMatch } from "@/lib/matching";
+import { AddToPlanButton } from "./AddToPlanButton";
 import { FavoriteButton } from "./FavoriteButton";
 
 const BADGES = {
@@ -19,9 +20,11 @@ type Props = {
   favorite?: FavoriteControl;
   /** Study Mode explanations, shown when present. */
   reasons?: string[];
+  /** Show the "Add to My Weekly Meals" button. */
+  planner?: boolean;
 };
 
-export function RecipeCard({ match, equipment, kitchenConfigured, applianceNames, favorite, reasons }: Props) {
+export function RecipeCard({ match, equipment, kitchenConfigured, applianceNames, favorite, reasons, planner }: Props) {
   const { recipe, status, have, missing, swaps, stillMissing } = match;
   const badge = BADGES[status];
   const required = have.length + missing.length;
@@ -108,14 +111,22 @@ export function RecipeCard({ match, equipment, kitchenConfigured, applianceNames
           </div>
         </div>
       </Link>
-      {favorite && (
-        <div className="absolute right-3 top-3">
-          <FavoriteButton
-            active={favorite.active}
-            pending={favorite.pending}
-            title={recipe.title}
-            onToggle={favorite.onToggle}
-          />
+      {(favorite || planner) && (
+        <div className="absolute right-3 top-3 flex gap-2">
+          {planner && (
+            <AddToPlanButton
+              recipe={recipe}
+              swaps={swaps.map((s) => ({ ruleId: s.rule.id, label: `${s.original.ingredient.name} → ${s.substitute.name}` }))}
+            />
+          )}
+          {favorite && (
+            <FavoriteButton
+              active={favorite.active}
+              pending={favorite.pending}
+              title={recipe.title}
+              onToggle={favorite.onToggle}
+            />
+          )}
         </div>
       )}
     </li>

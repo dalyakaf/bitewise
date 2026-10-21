@@ -145,10 +145,27 @@ Production (https://bitewise-plum.vercel.app) still runs Stage 2 (`df5e452`).
 
 ---
 
+## 🗓️ Stage 4 (local commit, NOT deployed): My Weekly Meals + Smart Grocery List
+- **`/app/plan`:**
+  - Monday–Sunday with breakfast, lunch and dinner, up to 3 recipes per slot.
+  - Add, change and remove meals; adjust servings (1–12); move between weeks.
+  - The 🗓️ button on Meal Finder cards, Favorites and recipe pages can plan the adapted Smart Swaps version.
+- **`/app/grocery`:**
+  - Built from that week's plan and scaled by servings.
+  - Amounts combine only when the units match (the one conversion is 1 tbsp = 3 tsp).
+  - Items in My Fridge are marked "check quantity"; nothing is subtracted.
+  - Chosen swaps use the substitute with its guidance text.
+  - Manual items; checkboxes saved per week; copy/print as plain text; grouped by category.
+- **Migrations to run, in order:**
+  1. `supabase/migrations/008_planner_grocery_schema.sql`
+  2. `supabase/migrations/009_recipe_ingredient_amounts.sql`
+- **Already verified before the migrations:** the contract suite 46/46, early-click/no-JS 53/53 and Stage 3 58/58 still pass, and the new pages degrade gracefully.
+
+---
+
 ## 🔮 Remaining features (not started)
 Each is listed in `src/lib/features.ts` as `status: "soon"`:
-- **My Weekly Meals:** plan the week around the university timetable.
-- **Smart Grocery List:** turn missing ingredients into a shopping list.
+- All originally planned features are now built (Stage 4 pending deployment).
 
 ## ⚠️ Known notes
 - **Security warning:** `npm audit` flags the copy of PostCSS that Next.js 15 ships with. It only processes our own CSS at build time, so it doesn't affect the running app. The fix requires Next.js 16, which changes how the login protection is set up, so it's deferred.

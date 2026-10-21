@@ -15,6 +15,9 @@ export type CatalogIngredient = {
 
 export type RecipeIngredient = {
   quantity: string | null;
+  /** Structured quantity (migration 009); null for "pinch"/"to taste" or before migration. */
+  amount?: number | null;
+  unit?: string | null;
   is_staple: boolean;
   is_optional: boolean;
   sort_order: number;
@@ -86,3 +89,42 @@ export const RECIPE_COLUMNS =
   "estimated_cost_per_serving_eur, difficulty, meal_types, tags, tools, instructions, storage_note, " +
   "recipe_ingredients(quantity, is_staple, is_optional, sort_order, ingredient:ingredients(id, name, aliases)), " +
   "recipe_equipment(appliance_id, option_group, is_optional, note)";
+
+// ── Stage 4: My Weekly Meals & Smart Grocery List ────────────────────────────
+
+export type MealSlot = "breakfast" | "lunch" | "dinner";
+export const MEAL_SLOTS: MealSlot[] = ["breakfast", "lunch", "dinner"];
+
+export type PlanRecipeSummary = {
+  id: number;
+  slug: string;
+  title: string;
+  emoji: string;
+  total_minutes: number;
+  servings: number;
+  meal_types: MealType[];
+};
+
+export type MealPlanEntry = {
+  id: string;
+  plan_date: string;
+  meal_slot: MealSlot;
+  recipe_id: number;
+  servings: number;
+  swap_ids: number[];
+  created_at: string;
+};
+
+export type GroceryRecipe = {
+  id: number;
+  title: string;
+  servings: number;
+  recipe_ingredients: RecipeIngredient[];
+};
+
+export type GroceryManualItem = { id: string; name: string; checked: boolean; created_at: string };
+
+export const PLAN_RECIPE_COLUMNS = "id, slug, title, emoji, total_minutes, servings, meal_types";
+export const PLAN_ENTRY_COLUMNS = "id, plan_date, meal_slot, recipe_id, servings, swap_ids, created_at";
+export const GROCERY_RECIPE_COLUMNS =
+  "id, title, servings, recipe_ingredients(quantity, amount, unit, is_staple, is_optional, sort_order, ingredient:ingredients(id, name, aliases, category))";

@@ -21,6 +21,8 @@ Next.js (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Auth + Postgr
    5. `supabase/migrations/005_recipe_library.sql`
    6. `supabase/migrations/006_stage3_schema.sql` (My Favorites, Smart Swaps tables, pack prices)
    7. `supabase/migrations/007_stage3_catalog_and_swaps.sql` (generated: catalog v2 + Smart Swaps)
+   8. `supabase/migrations/008_planner_grocery_schema.sql` (My Weekly Meals, Smart Grocery List)
+   9. `supabase/migrations/009_recipe_ingredient_amounts.sql` (generated: structured quantities; re-run after 005)
 5. In Supabase → **Authentication → Sign In / Providers → Email**, turn **Confirm email** off.
 6. `npm run dev` and open http://localhost:3000
 
@@ -33,7 +35,7 @@ Next.js (App Router) · TypeScript · Tailwind CSS v4 · Supabase (Auth + Postgr
 | `npm run lint`      | ESLint                       |
 | `npm run typecheck` | TypeScript type check        |
 | `npm run seed:check` | Validate recipe/ingredient seed data |
-| `npm run seed:build` | Validate and regenerate migrations 005 and 007 (004 is frozen) |
+| `npm run seed:build` | Validate and regenerate migrations 005, 007 and 009 (004 is frozen) |
 
 ## Structure
 
@@ -45,6 +47,8 @@ src/
   lib/features.ts      feature registry (Weekly Meals and Grocery List are "soon")
   lib/matching.ts      fridge ↔ recipe matching (Cook Now / Smart Swaps / Almost There), equipment
   lib/study-mode.ts    Study Mode ranking and plain-language reasons
+  lib/grocery.ts       grocery aggregation (scaling, unit-safe combining, fridge marking, chosen swaps)
+  lib/week.ts          ISO-week helpers and deterministic date labels
   lib/supabase/        browser, server and middleware Supabase clients
   middleware.ts        session refresh + /app protection
 supabase/setup.sql     Stage 1 schema, RLS policies and original seed data

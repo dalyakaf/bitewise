@@ -2,7 +2,7 @@
 //
 //   npm run seed:check                 validate everything
 //   npm run seed:check -- <file.mjs>   validate one recipe batch file
-//   npm run seed:build                 validate, then write migrations 005 and 007
+//   npm run seed:build                 validate, then write migrations 005, 007 and 009
 //
 // Source of truth: supabase/seed/ingredients.mjs, pack-prices.mjs, swaps.mjs and recipes/*.mjs.
 // 004 (Stage 2 catalog) is frozen because it has been applied; catalog changes ship in 007.
@@ -549,8 +549,52 @@ select
   (select count(*) from public.recipe_substitutions)     as recipe_substitutions;
 `;
 
+// 009: structured amount + unit per recipe ingredient (for grocery aggregation).
+const amountRows = [];
+for (const r of recipes) {
+  for (const [name, amount, unit] of r.ingredients) {
+    amountRows.push(`  (${q(r.slug)}, ${q(name)}, ${amount === null ? "null" : Number(amount)}, ${q(unit === "" ? "count" : unit)})`);
+  }
+}
+const amountsSql = `${HEADER}
+-- =============================================================================
+-- 009 — Structured recipe quantities (${amountRows.length} recipe ingredients)
+-- Run AFTER 008_planner_grocery_schema.sql. Safe to re-run. Only fills the new
+-- amount/unit columns on recipe_ingredients (shared catalog data); the existing
+-- display text in "quantity" is unchanged. Never touches user data.
+-- If 005_recipe_library.sql is ever re-run, run this file again afterwards.
+-- unit: g | ml | tsp | tbsp | count | clove | slice | can | handful | pinch | to taste
+-- =============================================================================
+begin;
+
+update public.recipe_ingredients ri
+set amount = v.amount::numeric, unit = v.unit
+from (values
+${amountRows.join(",\n")}
+) as v (slug, ingredient, amount, unit)
+join public.recipes r on r.slug = v.slug
+join public.ingredients i on i.name = v.ingredient
+where ri.recipe_id = r.id and ri.ingredient_id = i.id;
+
+do $$
+begin
+  if (select count(*) from public.recipe_ingredients ri join public.recipes r on r.id = ri.recipe_id
+      where r.slug = any(${seededSlugs}) and ri.unit is not null) <> ${amountRows.length} then
+    raise exception 'Recipe quantities incomplete. Did you run 008_planner_grocery_schema.sql first?';
+  end if;
+end $$;
+
+commit;
+
+select
+  count(*) filter (where unit is not null) as ingredients_with_units,
+  count(*) filter (where amount is not null) as ingredients_with_amounts
+from public.recipe_ingredients;
+`;
+
 // 004 is frozen (already applied in production); the catalog now ships in 007.
 void ingredientSql;
 writeFileSync(join(MIGRATIONS_DIR, "005_recipe_library.sql"), recipeSql);
 writeFileSync(join(MIGRATIONS_DIR, "007_stage3_catalog_and_swaps.sql"), stage3Sql);
-console.log(`✓ wrote supabase/migrations/005_recipe_library.sql (unchanged unless recipes changed) and 007_stage3_catalog_and_swaps.sql`);
+writeFileSync(join(MIGRATIONS_DIR, "009_recipe_ingredient_amounts.sql"), amountsSql);
+console.log(`✓ wrote supabase/migrations/005, 007 (unchanged unless seeds changed) and 009_recipe_ingredient_amounts.sql`);

@@ -31,7 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </a>
         <SiteHeader />
         <main id="main">{children}</main>
-        <footer className="mt-16 border-t border-line/70">
+        <footer className="mt-16 border-t border-line/70 print:hidden">
           <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-8 text-sm text-ink-soft sm:flex-row sm:justify-between sm:px-6">
             <p>© {new Date().getFullYear()} BiteWise · Eat smart. Spend less. Study more.</p>
             <p>Recipe costs are illustrative estimates, not live supermarket prices.</p>

@@ -43,8 +43,9 @@ export const FEATURES: Feature[] = [
     id: "weekly-meals",
     name: "My Weekly Meals",
     emoji: "🗓️",
-    summary: "Plan the week around your timetable, with quick meals on busy days and batch cooking on free ones.",
-    status: "soon",
+    summary: "Plan breakfast, lunch and dinner for the week around your timetable, then get a shopping list that builds itself.",
+    status: "live",
+    href: "/app/plan",
   },
   {
     id: "study-mode",
@@ -66,8 +67,9 @@ export const FEATURES: Feature[] = [
     id: "grocery-list",
     name: "Smart Grocery List",
     emoji: "🛒",
-    summary: "Turn missing ingredients into a shopping list that fits your budget.",
-    status: "soon",
+    summary: "Your week's meals turned into one combined shopping list, with what's already in your fridge marked.",
+    status: "live",
+    href: "/app/grocery",
   },
 ];
 

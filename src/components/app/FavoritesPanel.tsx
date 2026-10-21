@@ -8,9 +8,10 @@ type Props = {
   kitchenConfigured: boolean;
   favoriteFor: (recipe: Recipe) => FavoriteControl | undefined;
   unavailable: boolean;
+  planner?: boolean;
 };
 
-export function FavoritesPanel({ entries, applianceNames, kitchenConfigured, favoriteFor, unavailable }: Props) {
+export function FavoritesPanel({ entries, applianceNames, kitchenConfigured, favoriteFor, unavailable, planner }: Props) {
   return (
     <section id="favorites" aria-labelledby="favorites-heading" className="scroll-mt-24">
       <p className="text-sm font-semibold uppercase tracking-widest text-terracotta-600">❤️ My Favorites</p>
@@ -52,6 +53,7 @@ export function FavoritesPanel({ entries, applianceNames, kitchenConfigured, fav
                 kitchenConfigured={kitchenConfigured}
                 applianceNames={applianceNames}
                 favorite={favoriteFor(entry.recipe)}
+                planner={planner}
               />
             ))}
           </ul>

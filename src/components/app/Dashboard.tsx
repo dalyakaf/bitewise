@@ -5,7 +5,6 @@ import { buildCatalogIndex, buildMatchContext, matchEquipment, matchRecipe } fro
 import type { StudyEntry } from "@/lib/study-mode";
 import { createClient } from "@/lib/supabase/client";
 import type { Appliance, CatalogIngredient, FridgeItem, Recipe, SwapRule } from "@/lib/types";
-import { AppNav } from "./AppNav";
 import { ComingSoon } from "./ComingSoon";
 import { FavoritesPanel } from "./FavoritesPanel";
 import { FridgePanel } from "./FridgePanel";
@@ -24,6 +23,7 @@ type Props = {
   swapRules: SwapRule[];
   initialFavoriteIds: number[];
   favoritesUnavailable: boolean;
+  plannerAvailable: boolean;
 };
 
 type Notice = { kind: "info" | "error"; text: string };
@@ -47,6 +47,7 @@ export function Dashboard({
   swapRules,
   initialFavoriteIds,
   favoritesUnavailable,
+  plannerAvailable,
 }: Props) {
   const [items, setItems] = useState<FridgeItem[]>(initialItems);
   const [ownedAppliances, setOwnedAppliances] = useState<Set<string>>(() => new Set(initialOwnedAppliances));
@@ -130,8 +131,7 @@ export function Dashboard({
 
   return (
     <div className="mx-auto max-w-6xl space-y-12 px-4 py-6 sm:px-6 sm:py-8">
-      <div className="space-y-6">
-        <AppNav />
+      <div>
         <FridgePanel
           items={items}
           setItems={setItems}
@@ -153,6 +153,7 @@ export function Dashboard({
         ownedAppliances={ownedAppliances}
         unavailable={recipesUnavailable}
         favoriteFor={favoriteFor}
+        planner={plannerAvailable}
       />
       <FavoritesPanel
         entries={favoriteEntries}
@@ -160,6 +161,7 @@ export function Dashboard({
         kitchenConfigured={ownedAppliances.size > 0}
         favoriteFor={favoriteFor}
         unavailable={favoritesUnavailable}
+        planner={plannerAvailable}
       />
       <ComingSoon />
 

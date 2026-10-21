@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { AddToPlanButton } from "@/components/app/AddToPlanButton";
 import { RecipeFavoriteToggle } from "@/components/app/RecipeFavoriteToggle";
 import { buildMatchContext, costBand, matchEquipment, matchRecipe, TAG_LABELS } from "@/lib/matching";
 import { createClient } from "@/lib/supabase/server";
@@ -66,7 +67,7 @@ export default async function RecipePage({ params }: Params) {
   if (!recipeResult.data) notFound();
 
   const recipe = recipeResult.data as unknown as Recipe;
-  const [swapsResult, favoriteResult] = await Promise.all([
+  const [swapsResult, favoriteResult, plannerResult] = await Promise.all([
     supabase
       .from("recipe_substitutions")
       .select(
@@ -74,6 +75,7 @@ export default async function RecipePage({ params }: Params) {
       )
       .eq("recipe_id", recipe.id),
     supabase.from("favorite_recipes").select("recipe_id").eq("recipe_id", recipe.id).maybeSingle(),
+    supabase.from("meal_plan_entries").select("id", { head: true, count: "exact" }),
   ]);
   const swapRules: SwapRule[] = ((swapsResult.data ?? []) as unknown as { extra_minutes: number; rule: Omit<SwapRule, "recipe_substitutions"> | null }[])
     .filter((row) => row.rule)
@@ -143,6 +145,15 @@ export default async function RecipePage({ params }: Params) {
             )}
           </div>
           <p className="mt-2 text-lg text-ink-soft">{recipe.description}</p>
+          {!plannerResult.error && (
+            <div className="mt-4">
+              <AddToPlanButton
+                variant="full"
+                recipe={recipe}
+                swaps={swaps.map((s) => ({ ruleId: s.rule.id, label: `${s.original.ingredient.name} → ${s.substitute.name}` }))}
+              />
+            </div>
+          )}
 
           <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {[
