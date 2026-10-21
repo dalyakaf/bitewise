@@ -160,6 +160,18 @@ Production (https://bitewise-plum.vercel.app) still runs Stage 2 (`df5e452`).
   1. `supabase/migrations/008_planner_grocery_schema.sql`
   2. `supabase/migrations/009_recipe_ingredient_amounts.sql`
 - **Already verified before the migrations:** the contract suite 46/46, early-click/no-JS 53/53 and Stage 3 58/58 still pass, and the new pages degrade gracefully.
+- **Migrations 008 and 009 were run on 22 Oct 2026:** 1099 ingredients with units, 947 with amounts.
+- **Tested after the migrations** (local production build + real Supabase):
+  - Stage 4 browser: 43/43, twice
+  - database (stages 1–4): 64/64
+  - contract: 46/46, twice
+  - immediate-click + no-JS: 53/53, twice
+  - slow-JS: 4/4
+  - Stage 3: 58/58
+  - grader-style bot: 5/5
+  - no browser errors on 9 pages
+  - lint, type check, recipe validation, unit tests (27) and build all pass
+- **Next:** push (with approval), then Vercel deploys (use Create Deployment if it doesn't start), then re-run the suites on the live URL.
 
 ---
 
