@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useActionState } from "react";
+import { logInAction, signUpAction, type AuthState } from "@/app/auth-actions";
 
 type Mode = "signup" | "login";
 
@@ -31,67 +31,20 @@ const COPY = {
   },
 } as const;
 
-function friendlyError(message: string) {
-  const m = message.toLowerCase();
-  if (m.includes("invalid login credentials")) return "That email and password don't match. Please try again.";
-  if (m.includes("already registered") || m.includes("already exists")) {
-    return "An account with this email already exists. Try logging in instead.";
-  }
-  if (m.includes("password")) return message;
-  if (m.includes("email")) return "Please enter a valid email address.";
-  return "Something went wrong. Please try again in a moment.";
-}
+const INITIAL_STATE: AuthState = { error: null, email: "" };
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const copy = COPY[mode];
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setPending(true);
-
-    const supabase = createClient();
-    const credentials = { email: email.trim(), password };
-
-    if (mode === "signup") {
-      const { data, error: signUpError } = await supabase.auth.signUp(credentials);
-      if (signUpError) {
-        setError(friendlyError(signUpError.message));
-        setPending(false);
-        return;
-      }
-      if (!data.session) {
-        // Only happens if "Confirm email" is still enabled in the Supabase project.
-        const { error: signInError } = await supabase.auth.signInWithPassword(credentials);
-        if (signInError) {
-          setError("Your account was created, but it needs email confirmation before you can log in.");
-          setPending(false);
-          return;
-        }
-      }
-    } else {
-      const { error: signInError } = await supabase.auth.signInWithPassword(credentials);
-      if (signInError) {
-        setError(friendlyError(signInError.message));
-        setPending(false);
-        return;
-      }
-    }
-
-    // Full navigation so the middleware and server components see the new session cookie.
-    window.location.assign("/app");
-  }
+  // Server Action: the form POSTs to the server even before hydration, so
+  // credentials never end up in a URL. On success the action redirects to /app.
+  const [state, formAction, pending] = useActionState(mode === "signup" ? signUpAction : logInAction, INITIAL_STATE);
 
   return (
     <div className="w-full max-w-md rounded-[2rem] border border-line bg-white p-6 shadow-xl shadow-sage-800/5 sm:p-8">
       <h1 className="font-display text-3xl font-semibold tracking-tight">{copy.title}</h1>
       <p className="mt-2 text-ink-soft">{copy.subtitle}</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form action={formAction} className="mt-6 space-y-4">
         <div>
           <label htmlFor={`${mode}-email`} className="block text-sm font-semibold">
             Email
@@ -103,8 +56,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             name="email"
             autoComplete="email"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            defaultValue={state.email}
             className="mt-1.5 block w-full rounded-xl border border-line bg-cream/40 px-4 py-3 text-base outline-none transition focus:border-sage-500 focus:bg-white focus:ring-4 focus:ring-sage-100"
             placeholder="you@university.edu"
           />
@@ -122,8 +74,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
             autoComplete={copy.passwordAutoComplete}
             required
             minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             aria-describedby={mode === "signup" ? "password-hint" : undefined}
             className="mt-1.5 block w-full rounded-xl border border-line bg-cream/40 px-4 py-3 text-base outline-none transition focus:border-sage-500 focus:bg-white focus:ring-4 focus:ring-sage-100"
           />
@@ -135,9 +85,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </div>
 
         <div aria-live="polite">
-          {error && (
+          {state.error && (
             <p role="alert" className="rounded-xl bg-terracotta-50 px-4 py-3 text-sm font-medium text-terracotta-600">
-              {error}
+              {state.error}
             </p>
           )}
         </div>

@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { addFridgeItemAction, type AddFridgeItemState } from "@/app/app/actions";
 import { ingredientKey, recognise, suggestIngredients, type CatalogIndex, type Recognition } from "@/lib/matching";
 import { createClient } from "@/lib/supabase/client";
-import { FRIDGE_ITEM_COLUMNS, type CatalogIngredient, type FridgeItem } from "@/lib/types";
+import type { CatalogIngredient, FridgeItem } from "@/lib/types";
 
 const MAX_LENGTH = 120;
+const INITIAL_ADD_STATE: AddFridgeItemState = { status: "idle", error: null, item: null, submitted: "" };
 const QUICK_ADD = ["Eggs", "Rice", "Pasta", "Canned tomatoes", "Onion", "Garlic", "Cheese", "Chickpeas", "Bread"];
 
 const RECOGNITION_STYLES: Record<Recognition, { item: string; dot: string | null; label: string }> = {
@@ -41,46 +43,47 @@ type Props = {
 
 export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailable }: Props) {
   const [value, setValue] = useState("");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Saves exactly what was typed (only whitespace-only input is refused).
-  async function addIngredient(name: string) {
-    if (!name.trim()) {
-      setError("Type an ingredient first, for example “eggs”.");
-      inputRef.current?.focus();
-      return false;
-    }
-    if (name.length > MAX_LENGTH) {
-      setError(`Please keep it under ${MAX_LENGTH} characters.`);
-      return false;
-    }
+  // Saving runs as a Server Action, so the form also works if it is submitted
+  // before this page's JavaScript is ready (the browser POSTs and returns to /app).
+  const [result, formAction, saving] = useActionState(addFridgeItemAction, INITIAL_ADD_STATE);
 
-    setSaving(true);
-    setError(null);
-    const { data, error: insertError } = await createClient()
-      .from("fridge_items")
-      .insert({ name })
-      .select(FRIDGE_ITEM_COLUMNS)
-      .single();
-    setSaving(false);
+  // The input is uncontrolled so text typed before hydration is never wiped.
+  // Pick up anything typed before this component became interactive.
+  useEffect(() => {
+    if (inputRef.current?.value) setValue(inputRef.current.value);
+  }, []);
 
-    if (insertError || !data) {
-      setError("We couldn't save that ingredient. Please check your connection and try again.");
-      return false;
-    }
-    setItems((prev) => [data as FridgeItem, ...prev]);
-    setStatus(`${name} added to your fridge.`);
-    return true;
+  function setInput(text: string) {
+    if (inputRef.current) inputRef.current.value = text;
+    setValue(text);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (await addIngredient(value)) setValue("");
-    inputRef.current?.focus();
+  useEffect(() => {
+    if (result.status === "saved" && result.item) {
+      const saved = result.item;
+      setItems((prev) => (prev.some((i) => i.id === saved.id) ? prev : [saved, ...prev]));
+      setInput("");
+      setError(null);
+      setStatus(`${saved.name} added to your fridge.`);
+    } else if (result.status === "error") {
+      setInput(result.submitted); // React resets the form after an action; keep the user's text
+      setError(result.error);
+    }
+    if (result.status !== "idle") inputRef.current?.focus();
+  }, [result, setItems]);
+
+  // The action's own error is rendered directly so it also shows without JavaScript.
+  const shownError = error ?? (result.status === "error" ? result.error : null);
+
+  function addIngredient(name: string) {
+    const formData = new FormData();
+    formData.set("ingredient", name);
+    startTransition(() => formAction(formData));
   }
 
   // Removed from the list only after Supabase confirms, so a quick refresh can't bring it back.
@@ -102,7 +105,7 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
   }
 
   function pickSuggestion(name: string) {
-    setValue(name);
+    setInput(name);
     inputRef.current?.focus();
   }
 
@@ -122,7 +125,7 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
           <p className="text-ink-soft">Add what you have and we&apos;ll show you what you can cook.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <form action={formAction} className="mt-6 flex flex-col gap-3 sm:flex-row">
           <label htmlFor="ingredient-input" className="sr-only">
             Ingredient name
           </label>
@@ -134,7 +137,7 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
             name="ingredient"
             autoComplete="off"
             maxLength={MAX_LENGTH}
-            value={value}
+            defaultValue={result.status === "error" ? result.submitted : ""}
             onChange={(e) => setValue(e.target.value)}
             placeholder="e.g. eggs, rice, spinach…"
             aria-describedby="fridge-feedback ingredient-suggestions"
@@ -191,9 +194,9 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
         </div>
 
         <div id="fridge-feedback" aria-live="polite" className="mt-2 min-h-6 text-sm">
-          {error ? (
+          {shownError ? (
             <p role="alert" className="font-medium text-terracotta-600">
-              {error}
+              {shownError}
             </p>
           ) : (
             <p className="sr-only">{status}</p>

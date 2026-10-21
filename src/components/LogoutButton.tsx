@@ -1,27 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useFormStatus } from "react-dom";
+import { logOutAction } from "@/app/auth-actions";
 
-export function LogoutButton() {
-  const [pending, setPending] = useState(false);
-
-  async function handleLogout() {
-    setPending(true);
-    await createClient().auth.signOut();
-    // Full navigation so server components and middleware see the cleared session.
-    window.location.assign("/");
-  }
-
+function SubmitButton() {
+  const { pending } = useFormStatus();
   return (
     <button
-      type="button"
+      type="submit"
       data-testid="logout"
-      onClick={handleLogout}
       disabled={pending}
       className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-sage-500 hover:text-sage-800 disabled:opacity-60"
     >
       {pending ? "Logging out…" : "Log out"}
     </button>
+  );
+}
+
+// A form with a Server Action, so logging out also works before JavaScript loads.
+export function LogoutButton() {
+  return (
+    <form action={logOutAction}>
+      <SubmitButton />
+    </form>
   );
 }

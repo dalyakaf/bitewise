@@ -127,6 +127,24 @@ Production (https://bitewise-plum.vercel.app) still runs Stage 2 (`df5e452`).
 
 ---
 
+## 🛡️ Form interactivity fix (local commit, NOT deployed yet)
+- **The problem:** clicks in the ~0.3 s before React became interactive did a plain browser form submit. Sign-up and login put the email and password in the URL. The fridge form reloaded `/app?ingredient=…` and saved nothing. Text typed before React took over was wiped.
+- **The fix:**
+  - Sign-up, login, logout and the fridge form use Next.js Server Actions, so they always POST and work before or without JavaScript.
+  - A fridge save made before interactivity redirects back to `/app`, so a refresh can't save it twice.
+  - The fridge input keeps text typed before React takes over.
+- **Tested locally:**
+  - early-click + JavaScript-disabled: 53/53, twice
+  - typed-before-interactive: 4/4
+  - contract: 46/46, twice
+  - Stage 3: 58/58, twice
+  - database: 48/48
+  - grader-style bot: 5/5
+  - lint, type check and build all pass
+- Needs push approval; there are no database changes.
+
+---
+
 ## 🔮 Remaining features (not started)
 Each is listed in `src/lib/features.ts` as `status: "soon"`:
 - **My Weekly Meals:** plan the week around the university timetable.
