@@ -183,6 +183,8 @@ for (const r of recipes) {
     if (!Array.isArray(group.any) || group.any.length === 0) err("each equipment group needs a non-empty `any` array");
     for (const id of group.any ?? []) {
       if (!applianceIds.has(id)) err(`unknown appliance "${id}"`);
+      // recipe_equipment's primary key is (recipe_id, appliance_id)
+      if (listed.has(id)) err(`appliance "${id}" appears in more than one equipment group`);
       listed.add(id);
     }
     if ((group.any ?? []).length > 1) {

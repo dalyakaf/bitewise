@@ -634,7 +634,7 @@ export const RECIPES = [
     prep: 2, cook: 5, servings: 2, cost: 0.7, difficulty: "Easy",
     equipment: [
       { any: ["stovetop", "microwave"], note: "Microwave: heat the beans in a covered microwave-safe bowl on high for 2-3 minutes, stirring halfway, until piping hot." },
-      TOAST,
+      { any: ["toaster"] },
     ],
     tools: ["saucepan", "wooden spoon"],
     ingredients: [

@@ -69,7 +69,7 @@ Run them **in this order** in Supabase **SQL Editor → New query**. For each on
 | 1 | `supabase/migrations/002_my_kitchen.sql` | `appliances: 8` |
 | 2 | `supabase/migrations/003_recipe_schema.sql` | "Success. No rows returned" |
 | 3 | `supabase/migrations/004_ingredient_catalog.sql` | `ingredients_in_catalog: 157` |
-| 4 | `supabase/migrations/005_recipe_library.sql` | `recipes: 123`, `recipe_ingredient_links: 1099`, `recipe_equipment_links: 158` |
+| 4 | `supabase/migrations/005_recipe_library.sql` | `recipes: 123`, `recipe_ingredient_links: 1099`, `recipe_equipment_links: 155` |
 
 - **Nothing is dropped:** existing users and fridge items are untouched, and every file is safe to run again.
 - **If a file errors:** it rolls back completely. Copy the error message for Claude.

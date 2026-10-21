@@ -2,7 +2,7 @@
 -- Edit supabase/seed/** and run `npm run seed:build` instead.
 
 -- =============================================================================
--- 005 — Recipe library (123 recipes, 1099 ingredient links, 158 equipment links)
+-- 005 — Recipe library (123 recipes, 1099 ingredient links, 155 equipment links)
 -- Run AFTER 004. Safe to re-run: recipes are upserted by slug and their
 -- ingredient/equipment links are rebuilt. Never touches user data.
 -- Costs are illustrative per-serving estimates, not live prices.
@@ -75,7 +75,7 @@ values
    null),
   ('avocado-egg-toast', 'Avocado & Egg Toast', 'The café classic for a fraction of the price.', '🥑', 3, 7, 10, 1,
    1.40, 'Easy', array['breakfast'], array['quick', 'vegetarian'], array['frying pan', 'fork'],
-   array['Toast the bread.', 'Fry the egg in the oil in a frying pan over medium heat for 3-4 minutes, until the white is fully set.', 'Mash the avocado with a pinch of salt and spread it on the toast.', 'Top with the egg, a crack of black pepper and chilli flakes if you like.'],
+   array['Toast the bread in a toaster, or in a dry frying pan over medium heat for 1-2 minutes per side.', 'Fry the egg in the oil in a frying pan over medium heat for 3-4 minutes, until the white is fully set.', 'Mash the avocado with a pinch of salt and spread it on the toast.', 'Top with the egg, a crack of black pepper and chilli flakes if you like.'],
    null),
   ('spanish-potato-omelette', 'Spanish Potato Omelette', 'Tortilla de patatas: three ingredients, endless student dinners.', '🥔', 10, 30, 40, 3,
    0.70, 'Medium', array['lunch', 'dinner'], array['budget', 'meal-prep', 'vegetarian'], array['non-stick frying pan', 'large plate', 'large bowl'],
@@ -111,7 +111,7 @@ values
    null),
   ('garlic-mushrooms-on-toast', 'Garlic Mushrooms on Toast', 'Buttery, savoury and ready in about 12 minutes.', '🍞', 4, 8, 12, 1,
    1.20, 'Easy', array['breakfast', 'lunch'], array['budget', 'quick', 'vegetarian'], array['frying pan'],
-   array['Slice the mushrooms and garlic.', 'Melt the butter in a frying pan over medium-high heat and fry the mushrooms for 5-6 minutes until golden and their liquid has evaporated.', 'Add the garlic for the final minute and season with salt and pepper.', 'Toast the bread and pile the mushrooms on top. Scatter over parsley if using.'],
+   array['Slice the mushrooms and garlic.', 'Melt the butter in a frying pan over medium-high heat and fry the mushrooms for 5-6 minutes until golden and their liquid has evaporated.', 'Add the garlic for the final minute and season with salt and pepper.', 'Toast the bread in a toaster (or wipe out the pan and toast it for 1-2 minutes per side), then pile the mushrooms on top. Scatter over parsley if using.'],
    null),
   ('greek-yogurt-berry-parfait', 'Greek Yogurt Berry Parfait', 'Creamy yogurt, juicy berries and crunchy granola layered in a glass. Breakfast in five minutes, no cooking.', '🍓', 5, 0, 5, 1,
    1.30, 'Easy', array['breakfast', 'snack'], array['fresh', 'no-cook', 'quick', 'vegetarian'], array['glass or jar', 'spoon'],
@@ -1658,8 +1658,7 @@ from (values
   ('quick-mushroom-risotto', 'stovetop', 1, false, null),
   ('veggie-noodle-stir-fry', 'stovetop', 1, false, null),
   ('avocado-egg-toast', 'stovetop', 1, false, null),
-  ('avocado-egg-toast', 'toaster', 2, false, 'Stovetop: toast the bread in a dry frying pan over medium heat for 1-2 minutes per side.'),
-  ('avocado-egg-toast', 'stovetop', 2, false, null),
+  ('avocado-egg-toast', 'toaster', 2, true, null),
   ('spanish-potato-omelette', 'stovetop', 1, false, null),
   ('chorizo-chickpea-stew', 'stovetop', 1, false, null),
   ('pasta-peas-ham', 'stovetop', 1, false, null),
@@ -1669,8 +1668,7 @@ from (values
   ('banana-oat-pancakes', 'stovetop', 1, false, null),
   ('chicken-salad-wrap', 'stovetop', 1, false, null),
   ('garlic-mushrooms-on-toast', 'stovetop', 1, false, null),
-  ('garlic-mushrooms-on-toast', 'toaster', 2, false, 'Stovetop: toast the bread in a dry frying pan over medium heat for 1-2 minutes per side.'),
-  ('garlic-mushrooms-on-toast', 'stovetop', 2, false, null),
+  ('garlic-mushrooms-on-toast', 'toaster', 2, true, null),
   ('microwave-scrambled-eggs', 'microwave', 1, false, null),
   ('breakfast-burrito', 'stovetop', 1, false, null),
   ('spinach-feta-egg-muffins', 'oven', 1, false, 'Air fryer: use silicone muffin cases and cook at 160°C for 12-15 minutes, in batches if needed, until set in the centre.'),
@@ -1700,8 +1698,7 @@ from (values
   ('mango-lassi-smoothie', 'blender', 1, false, null),
   ('cheesy-beans-on-toast', 'stovetop', 1, false, 'Microwave: heat the beans in a covered microwave-safe bowl on high for 2-3 minutes, stirring halfway, until piping hot.'),
   ('cheesy-beans-on-toast', 'microwave', 1, false, null),
-  ('cheesy-beans-on-toast', 'toaster', 2, false, 'Stovetop: toast the bread in a dry frying pan over medium heat for 1-2 minutes per side.'),
-  ('cheesy-beans-on-toast', 'stovetop', 2, false, null),
+  ('cheesy-beans-on-toast', 'toaster', 2, false, null),
   ('blueberry-baked-oats', 'oven', 1, false, null),
   ('chicken-shawarma-bowls', 'stovetop', 1, false, null),
   ('mediterranean-couscous-salad', 'kettle', 1, false, 'Stovetop: bring 200 ml water to the boil in a small saucepan, take it off the heat, stir in the couscous, cover and leave for 5 minutes.'),
@@ -1808,7 +1805,7 @@ begin
     raise exception 'Recipe ingredient links incomplete. Did you run 004_ingredient_catalog.sql first?';
   end if;
   if (select count(*) from public.recipe_equipment re join public.recipes r on r.id = re.recipe_id
-      where r.slug = any(array['egg-fried-rice', 'tomato-garlic-spaghetti', 'cheesy-veggie-omelette', 'chickpea-spinach-curry', 'black-bean-quesadillas', 'tuna-pasta-salad', 'overnight-oats', 'peanut-butter-banana-toast', 'shakshuka', 'lemon-garlic-chicken-rice', 'red-lentil-soup', 'sheet-pan-sweet-potato-chickpeas', 'quick-mushroom-risotto', 'veggie-noodle-stir-fry', 'greek-salad', 'avocado-egg-toast', 'spanish-potato-omelette', 'chorizo-chickpea-stew', 'pasta-peas-ham', 'loaded-jacket-potato', 'coconut-lentil-dal', 'zucchini-feta-pasta', 'banana-oat-pancakes', 'chicken-salad-wrap', 'garlic-mushrooms-on-toast', 'greek-yogurt-berry-parfait', 'microwave-scrambled-eggs', 'breakfast-burrito', 'spinach-feta-egg-muffins', 'berry-banana-smoothie', 'peanut-butter-oat-smoothie', 'apple-cinnamon-porridge', 'chia-seed-pudding', 'cinnamon-french-toast', 'smoked-salmon-cream-cheese-bagel', 'tomato-basil-bruschetta', 'air-fryer-crispy-chickpeas', 'air-fryer-potato-wedges', 'microwave-chocolate-mug-cake', 'loaded-nachos', 'hummus-veggie-snack-box', 'caprese-salad', 'egg-cheese-breakfast-bagel', 'savoury-oats-fried-egg', 'chilli-garlic-edamame', 'pitta-bread-pizzas', 'mango-lassi-smoothie', 'smashed-avocado-chickpea-sandwich', 'cheesy-beans-on-toast', 'blueberry-baked-oats', 'tuna-cucumber-rice-cakes', 'chicken-shawarma-bowls', 'mediterranean-couscous-salad', 'quinoa-black-bean-salad', 'classic-tuna-melt', 'halloumi-veg-wraps', 'chicken-caesar-wraps', 'air-fryer-chickpea-falafel-pittas', 'sweet-chilli-prawn-rice-bowls', 'teriyaki-tofu-rice-bowls', 'warm-lentil-feta-salad', 'egg-mayo-sandwiches', 'pesto-pasta-salad', 'peanut-noodle-salad', 'burrito-bowls', 'tomato-mozzarella-panini', '10-minute-tomato-soup', 'minestrone-soup', 'leek-potato-soup', 'greek-chicken-pittas', 'smoked-salmon-sushi-bowls', 'chopped-chickpea-salad', 'ham-cheese-toastie', 'peanut-butter-ramen', 'prawn-noodle-soup', 'air-fryer-salmon-bowls', 'garlic-butter-mushroom-pasta', 'creamy-pesto-gnocchi', 'loaded-sweet-potatoes', 'spaghetti-bolognese', 'chilli-con-carne', 'chicken-fajitas', 'air-fryer-paprika-chicken-thighs', 'honey-garlic-chicken', 'beef-broccoli-stir-fry', 'turkey-meatballs-tomato-sauce', 'sausage-veg-traybake', 'lemon-garlic-prawn-pasta', 'baked-white-fish-tomatoes-olives', 'easy-chicken-curry', 'bacon-carbonara', 'sausage-bean-casserole', 'smash-burgers', 'chicken-satay-noodles', 'air-fryer-chicken-tenders', 'cottage-pie', 'rice-cooker-ginger-chicken-rice', 'tuna-pasta-bake', 'microwave-steamed-salmon-greens', 'stovetop-mac-and-cheese', 'one-pan-lazy-lasagne', 'black-bean-burgers', 'mushroom-stroganoff', 'veggie-chilli', 'roasted-cauliflower-tacos', 'baked-feta-pasta', 'roasted-butternut-squash-soup', 'stuffed-peppers', 'veggie-pad-thai-noodles', 'tofu-scramble', 'pasta-e-ceci', 'ratatouille', 'cheesy-broccoli-pasta', 'patatas-bravas', 'halloumi-veg-traybake', 'lentil-bolognese', 'crispy-air-fryer-tofu-rice', 'vegetable-paella-style-rice', 'huevos-rancheros', 'aubergine-chickpea-stew', 'coconut-curry-noodle-soup', 'cheesy-garlic-bread', 'creamy-rice-pudding'])) <> 158 then
+      where r.slug = any(array['egg-fried-rice', 'tomato-garlic-spaghetti', 'cheesy-veggie-omelette', 'chickpea-spinach-curry', 'black-bean-quesadillas', 'tuna-pasta-salad', 'overnight-oats', 'peanut-butter-banana-toast', 'shakshuka', 'lemon-garlic-chicken-rice', 'red-lentil-soup', 'sheet-pan-sweet-potato-chickpeas', 'quick-mushroom-risotto', 'veggie-noodle-stir-fry', 'greek-salad', 'avocado-egg-toast', 'spanish-potato-omelette', 'chorizo-chickpea-stew', 'pasta-peas-ham', 'loaded-jacket-potato', 'coconut-lentil-dal', 'zucchini-feta-pasta', 'banana-oat-pancakes', 'chicken-salad-wrap', 'garlic-mushrooms-on-toast', 'greek-yogurt-berry-parfait', 'microwave-scrambled-eggs', 'breakfast-burrito', 'spinach-feta-egg-muffins', 'berry-banana-smoothie', 'peanut-butter-oat-smoothie', 'apple-cinnamon-porridge', 'chia-seed-pudding', 'cinnamon-french-toast', 'smoked-salmon-cream-cheese-bagel', 'tomato-basil-bruschetta', 'air-fryer-crispy-chickpeas', 'air-fryer-potato-wedges', 'microwave-chocolate-mug-cake', 'loaded-nachos', 'hummus-veggie-snack-box', 'caprese-salad', 'egg-cheese-breakfast-bagel', 'savoury-oats-fried-egg', 'chilli-garlic-edamame', 'pitta-bread-pizzas', 'mango-lassi-smoothie', 'smashed-avocado-chickpea-sandwich', 'cheesy-beans-on-toast', 'blueberry-baked-oats', 'tuna-cucumber-rice-cakes', 'chicken-shawarma-bowls', 'mediterranean-couscous-salad', 'quinoa-black-bean-salad', 'classic-tuna-melt', 'halloumi-veg-wraps', 'chicken-caesar-wraps', 'air-fryer-chickpea-falafel-pittas', 'sweet-chilli-prawn-rice-bowls', 'teriyaki-tofu-rice-bowls', 'warm-lentil-feta-salad', 'egg-mayo-sandwiches', 'pesto-pasta-salad', 'peanut-noodle-salad', 'burrito-bowls', 'tomato-mozzarella-panini', '10-minute-tomato-soup', 'minestrone-soup', 'leek-potato-soup', 'greek-chicken-pittas', 'smoked-salmon-sushi-bowls', 'chopped-chickpea-salad', 'ham-cheese-toastie', 'peanut-butter-ramen', 'prawn-noodle-soup', 'air-fryer-salmon-bowls', 'garlic-butter-mushroom-pasta', 'creamy-pesto-gnocchi', 'loaded-sweet-potatoes', 'spaghetti-bolognese', 'chilli-con-carne', 'chicken-fajitas', 'air-fryer-paprika-chicken-thighs', 'honey-garlic-chicken', 'beef-broccoli-stir-fry', 'turkey-meatballs-tomato-sauce', 'sausage-veg-traybake', 'lemon-garlic-prawn-pasta', 'baked-white-fish-tomatoes-olives', 'easy-chicken-curry', 'bacon-carbonara', 'sausage-bean-casserole', 'smash-burgers', 'chicken-satay-noodles', 'air-fryer-chicken-tenders', 'cottage-pie', 'rice-cooker-ginger-chicken-rice', 'tuna-pasta-bake', 'microwave-steamed-salmon-greens', 'stovetop-mac-and-cheese', 'one-pan-lazy-lasagne', 'black-bean-burgers', 'mushroom-stroganoff', 'veggie-chilli', 'roasted-cauliflower-tacos', 'baked-feta-pasta', 'roasted-butternut-squash-soup', 'stuffed-peppers', 'veggie-pad-thai-noodles', 'tofu-scramble', 'pasta-e-ceci', 'ratatouille', 'cheesy-broccoli-pasta', 'patatas-bravas', 'halloumi-veg-traybake', 'lentil-bolognese', 'crispy-air-fryer-tofu-rice', 'vegetable-paella-style-rice', 'huevos-rancheros', 'aubergine-chickpea-stew', 'coconut-curry-noodle-soup', 'cheesy-garlic-bread', 'creamy-rice-pudding'])) <> 155 then
     raise exception 'Recipe equipment links incomplete. Did you run 002_my_kitchen.sql first?';
   end if;
 end $$;

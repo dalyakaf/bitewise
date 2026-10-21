@@ -12,6 +12,8 @@ const TOAST = {
   any: ["toaster", "stovetop"],
   note: "Stovetop: toast the bread in a dry frying pan over medium heat for 1-2 minutes per side.",
 };
+// For recipes that already need the stovetop: an appliance may only appear once per recipe.
+const TOASTER_OPTIONAL = { any: ["toaster"], optional: true };
 
 export const RECIPES = [
   {
@@ -421,7 +423,7 @@ export const RECIPES = [
     meals: ["breakfast"],
     tags: [],
     prep: 3, cook: 7, servings: 1, cost: 1.4, difficulty: "Easy",
-    equipment: [STOVE, TOAST],
+    equipment: [STOVE, TOASTER_OPTIONAL],
     tools: ["frying pan", "fork"],
     ingredients: [
       ["bread", 2, "slice"],
@@ -433,7 +435,7 @@ export const RECIPES = [
       ["black pepper", null, "pinch", null, "staple"],
     ],
     steps: [
-      "Toast the bread.",
+      "Toast the bread in a toaster, or in a dry frying pan over medium heat for 1-2 minutes per side.",
       "Fry the egg in the oil in a frying pan over medium heat for 3-4 minutes, until the white is fully set.",
       "Mash the avocado with a pinch of salt and spread it on the toast.",
       "Top with the egg, a crack of black pepper and chilli flakes if you like.",
@@ -657,7 +659,7 @@ export const RECIPES = [
     meals: ["breakfast", "lunch"],
     tags: [],
     prep: 4, cook: 8, servings: 1, cost: 1.2, difficulty: "Easy",
-    equipment: [STOVE, TOAST],
+    equipment: [STOVE, TOASTER_OPTIONAL],
     tools: ["frying pan"],
     ingredients: [
       ["mushroom", 150, "g"],
@@ -672,7 +674,7 @@ export const RECIPES = [
       "Slice the mushrooms and garlic.",
       "Melt the butter in a frying pan over medium-high heat and fry the mushrooms for 5-6 minutes until golden and their liquid has evaporated.",
       "Add the garlic for the final minute and season with salt and pepper.",
-      "Toast the bread and pile the mushrooms on top. Scatter over parsley if using.",
+      "Toast the bread in a toaster (or wipe out the pan and toast it for 1-2 minutes per side), then pile the mushrooms on top. Scatter over parsley if using.",
     ],
   },
 ];
