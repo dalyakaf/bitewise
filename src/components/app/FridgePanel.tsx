@@ -14,6 +14,11 @@ const RECOGNITION_STYLES: Record<Recognition, { item: string; dot: string | null
     dot: "bg-sage-500",
     label: "Used in our recipes",
   },
+  "in-swaps": {
+    item: "border-sage-200 bg-sage-50 text-sage-800",
+    dot: "border-2 border-sage-500 bg-sage-100",
+    label: "Used in our recipes as a Smart Swap",
+  },
   recognised: {
     item: "border-terracotta-100 bg-white text-ink",
     dot: "border-2 border-terracotta-400 bg-white",
@@ -248,7 +253,7 @@ export function FridgePanel({ items, setItems, catalog, catalogIndex, unavailabl
 
           {items.length > 0 && hasCatalog && (
             <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-soft" aria-label="Legend">
-              {(["in-recipes", "recognised", "unknown"] as const).map((key) => (
+              {(["in-recipes", "in-swaps", "recognised", "unknown"] as const).map((key) => (
                 <li key={key} className="flex items-center gap-2">
                   <span
                     aria-hidden="true"

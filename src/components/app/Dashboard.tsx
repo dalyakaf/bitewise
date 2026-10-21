@@ -54,7 +54,7 @@ export function Dashboard({
   const [favoritePending, setFavoritePending] = useState<Set<number>>(new Set());
   const [notice, setNotice] = useState<Notice | null>(null);
 
-  const catalogIndex = useMemo(() => buildCatalogIndex(catalog, recipes), [catalog, recipes]);
+  const catalogIndex = useMemo(() => buildCatalogIndex(catalog, recipes, swapRules), [catalog, recipes, swapRules]);
   const applianceNames = useMemo(() => Object.fromEntries(appliances.map((a) => [a.id, a.name])), [appliances]);
   const entries: StudyEntry[] = useMemo(() => {
     const ctx = buildMatchContext(items, catalog, swapRules);

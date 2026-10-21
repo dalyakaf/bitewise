@@ -117,7 +117,13 @@ Production (https://bitewise-plum.vercel.app) still runs Stage 2 (`df5e452`).
 - **Migrations to run, in order:**
   1. `supabase/migrations/006_stage3_schema.sql`
   2. `supabase/migrations/007_stage3_catalog_and_swaps.sql`
-- **Safe to deploy only after both migrations have run.** The code also degrades gracefully without them: favourites hidden, no swaps.
+- **Migrations 006 and 007 were run on 22 Oct 2026.** Database counts confirmed: 158 ingredients, 52 swap rules, 234 recipe swaps.
+- **Tests passed locally on 22 Oct 2026** (production build + real Supabase):
+  - database: 48/48
+  - Stage 3 browser: 58/58, twice
+  - contract/regression browser: 46/46
+  - lint, type check, recipe validation and build all pass
+- **Next:** push (with approval), then Vercel deploys. Re-run the contract checks on the live URL.
 
 ---
 

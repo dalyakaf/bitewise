@@ -187,25 +187,31 @@ export function matchRecipe(recipe: Recipe, ctx: MatchContext): RecipeMatch {
 
 // ── Ingredient recognition (catalog vs. recipe library) ──────────────────────
 
-export type Recognition = "in-recipes" | "recognised" | "unknown";
+export type Recognition = "in-recipes" | "in-swaps" | "recognised" | "unknown";
 
 export type CatalogIndex = {
   byKey: Map<string, CatalogIngredient>;
   usedIds: Set<number>;
+  /** Ingredients that only appear as Smart Swaps alternatives. */
+  swapIds: Set<number>;
 };
 
-export function buildCatalogIndex(catalog: CatalogIngredient[], recipes: Recipe[]): CatalogIndex {
+export function buildCatalogIndex(catalog: CatalogIngredient[], recipes: Recipe[], swapRules: SwapRule[] = []): CatalogIndex {
   const byKey = new Map<string, CatalogIngredient>();
   catalog.forEach((ingredient) => ingredientKeys(ingredient).forEach((key) => byKey.set(key, ingredient)));
   const usedIds = new Set<number>();
   recipes.forEach((recipe) => recipe.recipe_ingredients.forEach((ri) => usedIds.add(ri.ingredient.id)));
-  return { byKey, usedIds };
+  const swapIds = new Set(
+    swapRules.filter((rule) => rule.recipe_substitutions.length > 0).map((rule) => rule.substitute_ingredient_id),
+  );
+  return { byKey, usedIds, swapIds };
 }
 
 export function recognise(name: string, index: CatalogIndex): { status: Recognition; ingredient?: CatalogIngredient } {
   const ingredient = index.byKey.get(ingredientKey(name));
   if (!ingredient) return { status: "unknown" };
-  return { status: index.usedIds.has(ingredient.id) ? "in-recipes" : "recognised", ingredient };
+  if (index.usedIds.has(ingredient.id)) return { status: "in-recipes", ingredient };
+  return { status: index.swapIds.has(ingredient.id) ? "in-swaps" : "recognised", ingredient };
 }
 
 /** Autocomplete: catalog names (and aliases) that start with or contain the typed text. */
